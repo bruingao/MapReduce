@@ -73,41 +73,86 @@ public final class Scheduler {
 		return files.containsKey(filename) || tempFiles.containsKey(filename); 
 	}
 	
+	/* choose most lightweight nodes */
+	public static String[] chooseLight(int num, HashSet<String> nodes) {
+		
+		String res[] = new String[num];
+		int sizes[] = new int[num];
+				
+		int cnt = 0;
+				
+		for (String datanode : nodeToReplicas.keySet()) {
+			int size = nodeToReplicas.get(datanode).size();
+			
+			if(nodes != null && nodes.contains(datanode)) 
+				continue;
+			
+			if(cnt < num) {
+				res[cnt] = datanode;
+				sizes[cnt] = size;
+				cnt++;
+			}
+			else {
+				int mindex = 0;
+				for(int i = 1; i < num; i++) {
+					if(sizes[i] > sizes[mindex]) {
+						mindex = i;
+					}
+				}
+				if(size < sizes[mindex]) {
+					res[mindex] = datanode;
+					sizes[mindex] = size;
+				}
+			}
+		}
+		
+		return res;
+	}
+	
+	/* choose most heavy nodes */
+	public static String[] chooseHeavy(int num , String[] nodes) {
+				
+		if(nodes == null)
+			nodes = (String[]) nodeToReplicas.keySet().toArray();
+		
+		
+		String res[] = new String[num];
+		int sizes[] = new int[num];
+				
+		int cnt = 0;
+		
+		for (String datanode : nodes) {
+			int size = nodeToReplicas.get(datanode).size();
+			
+			if(cnt < num) {
+				res[cnt] = datanode;
+				sizes[cnt] = size;
+			}
+			else {
+				int mindex = 0;
+				for(int i = 1; i < num; i++) {
+					if(sizes[i] < sizes[mindex]) {
+						mindex = i;
+					}
+				}
+				if(size > sizes[mindex]) {
+					res[mindex] = datanode;
+					sizes[mindex] = size;
+				}
+			}
+		}
+		
+		return res;
+	}
+	
+	
 	/* create new file entry, stored in tempfile table */
 	public static HashMap<Integer, HashSet<String>> createFile(String filename, int chunks, int replicas) {
 		if(checkname(filename))
 			return null;
 		
 		int num = chunks * replicas;
-		String set[] = new String[num];
-		int counts[] = new int[num];
-		int cnt = 0;
-			
-		Iterator<Map.Entry<String, HashSet<String>>> it = nodeToReplicas.entrySet().iterator();
-		
-		/* determine the nodes with minimum data files */
-		while(it.hasNext()) {
-			Map.Entry<String, HashSet<String>> entry = it.next();
-			
-			int size = entry.getValue().size();
-			
-			if(cnt < num) {
-				set[cnt] = entry.getKey();
-				counts[cnt] = size;
-			}
-			else {
-				int mindex = 0;
-				for(int i = 1; i < num; i++) {
-					if(counts[i] > counts[mindex]) {
-						mindex = i;
-					}
-				}
-				if(size < counts[mindex]) {
-					set[mindex] = entry.getKey();
-					counts[mindex] = size;
-				}
-			}
-		}
+		String set[] = chooseLight(num, null);
 		
 		HashMap<Integer, HashSet<String>> res = new HashMap<Integer, HashSet<String>>();
 		
@@ -120,9 +165,21 @@ public final class Scheduler {
 		}
 		
 		tempFiles.put(filename, res);
-		
+				
 		return res;
 		
+	}
+	
+	public static void replication (String filename, int chunknumber, String node) {
+		files.get(filename).get(chunknumber).add(node);
+		
+		nodeToReplicas.get(node).add(filename+chunknumber);
+	}
+	
+	public static void removeReplica (String filename, int chunknumber, String node) {
+		files.get(filename).get(chunknumber).remove(node);
+		
+		nodeToReplicas.get(node).remove(filename + chunknumber);
 	}
 	
 	public static void transferTemp(String filename) {
@@ -133,6 +190,16 @@ public final class Scheduler {
 	
 	public static void deleteTemp(String filename) {
 		tempFiles.remove(filename);
+	}
+	
+	public static void removeFile(String filename) {
+		for(Integer c : files.get(filename).keySet()) {
+			for (String node : files.get(filename).get(c)) {
+				nodeToReplicas.get(node).remove(filename+c);
+			}
+		}
+		
+		files.remove(filename);
 	}
 	
 	

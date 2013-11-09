@@ -11,4 +11,6 @@ public interface DataNodeI extends Remote{
 	public void removeFile(String filename) throws RemoteException;
 	
 	public boolean heartBeat() throws RemoteException;
+	
+	public boolean replication(String filename, String[] nodes) throws RemoteException;
 }

@@ -6,7 +6,11 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashSet;
 import java.util.HashMap;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import Common.Scheduler;
 import Common.Util;
@@ -18,11 +22,17 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	 */
 	private static final long serialVersionUID = 7921414827247184085L;
 
+	/* configuration file */
+	private static String confPath = "../conf/dfs.conf";
+	
+	/* datanode file */
+	private static String dnPath = "../conf/slaves";
+	
 	/* replication factor read from configuration file */
 	private static int replicaFactor;
 	
 	/* service name read from configuration file */
-	private static String NameNodeServiceName;
+	private static String nameNodeServiceName;
 	
 	/* registry hostname read from configuration file */
 	private static String registryHostname;
@@ -33,18 +43,26 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	/* the NameNode's port read from configuration file */
 	private static int nameNodePort;
 	
+	/* the dataNode's port number */
+	private static int dataNodePort;
+	
 	/* chunk size */
 	private static int chunksize;	
 	
+	/* datanode service name */
+	private static String dataNodeServiceName;
+	
 	/* namenode tmp file path */
-	private static String nameNodePath;
-
+	public static String nameNodePath;
+	
+	private static ExecutorService executor = Executors.newCachedThreadPool();
 	
 	public NameNode() throws RemoteException{
 		Init();
 	}
 	
 	private void Init() {
+		/* read checkpoint */
 		Object obj = Util.readObject(nameNodePath+"files");
 		if (obj != null)
 			Scheduler.setFiles((ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>>) obj);
@@ -53,11 +71,8 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 		if (obj != null)
 			Scheduler.setNodeToReplicas((ConcurrentHashMap<String, HashSet<String>>) obj);
 		
-		obj = Util.readObject(nameNodePath+"status");
-		if (obj != null)
-			Scheduler.setStatus((ConcurrentHashMap<String, Boolean>) obj);
-		
 		obj = Util.readObject(nameNodePath+"tempfiles");
+		if (obj != null)
 			Scheduler.setTempFiles((ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>>) obj);
 	}
 	
@@ -67,18 +82,68 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	
 	/* check data nodes */
 	public void checkDataNodes(){
-		
-		for()
-		Registry registry = LocateRegistry.getRegistry(host);
-        Hello stub = (Hello) registry.lookup("Hello");
+		for (String host : Scheduler.getStatus().keySet()) {
+			checkThread ct = new checkThread(host, dataNodePort, dataNodeServiceName, registryHostname, registryPort);
+			ct.setOp(checkThread.OP.STATUS);
+			executor.execute(ct);
+		}
 	}
+	
+	/* check file replication */
+	public void checkreplication() {
+		for (String name : Scheduler.getFiles().keySet()) {
+			HashMap<Integer, HashSet<String>> map = Scheduler.getFiles().get(name);
+			for (Integer i : map.keySet()) {
+				int cnt  = 0;
+				HashSet<String> candidates = new HashSet<String>();
+				for (String datanode : map.get(i)) {
+					if(Scheduler.getStatus().get(datanode)) {
+						cnt++;
+						candidates.add(datanode);
+					}
+				}
+				if (cnt > replicaFactor) {
 
+					String res[] = Scheduler.chooseHeavy(cnt-replicaFactor, (String[])candidates.toArray());
+					
+					for (String r : res) {
+						checkThread t = new checkThread(r, dataNodePort, dataNodeServiceName, registryHostname, registryPort);
+						t.setFilename(name);
+						t.setChunknumber(i);
+						t.setOp(checkThread.OP.DELETE);
+						executor.execute(t);
+					}
+				}
+				else if (cnt < replicaFactor) {
+					String res[] = Scheduler.chooseLight(replicaFactor - cnt, candidates);
+					
+					for (String r : res) {
+						if(r == null)
+							break;
+						
+						checkThread t = new checkThread(r, dataNodePort, dataNodeServiceName, registryHostname, registryPort);
+						t.setFilename(name);
+						t.setChunknumber(i);
+						t.setOp(checkThread.OP.WRITE);
+						t.setNodes((String[]) candidates.toArray());
+						executor.execute(t);
+					}
+				}
+			}
+		}
+	}
+	
 	/* add a new file */	
 	@Override
-	public HashMap<Integer, HashSet<String>> writeFile(String filename, int lines)
+	public HashMap<Integer, HashSet<String>> writeFile(String filename, int num)
 			throws RemoteException {
 		
-		return Scheduler.createFile(filename, lines%chunksize>0? lines/chunksize + 1:lines/chunksize, replicaFactor);
+		HashMap<Integer, HashSet<String>> res = Scheduler.createFile(filename, num, replicaFactor);
+		
+		/* check point */
+		Util.writeObject(nameNodePath + filename, Scheduler.getTempFiles());
+		
+		return res;
 	}
 
 	@Override
@@ -95,42 +160,73 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 			Scheduler.transferTemp(filename);
 		else
 			Scheduler.deleteTemp(filename);
+		
+		/* check point */
+		Util.writeObject(NameNode.nameNodePath+"files", Scheduler.getFiles());
+		Util.writeObject(NameNode.nameNodePath+"tempFiles", Scheduler.getTempFiles());
 	}
 	
 	public static void readDataNodes(String filename) {
 		String content = Util.readFromFile(filename).toString();
 		String lines[] = content.split("\n");
 		for(int i = 0; i < lines.length; i++) {
-			Scheduler.getStatus().put(lines[i], true);
+			Scheduler.getStatus().put(lines[i], false);
 			Scheduler.getNodeToReplicas().put(lines[i], null);
 		}
 	}
 	
+	public void checkTimer() {
+		Timer check = new Timer();
+		check.scheduleAtFixedRate (new TimerTask(){
+			
+			@Override
+			public void run() {
+				checkDataNodes();
+				checkreplication();
+			}
+		},0, 5000);
+	}
+	
 	public static void main(String []args) {
-		
-		if (args.length < 3) {
-			System.out.println("Usage: NameNode [configuration file name] [datanodes info. file name]");
-			System.exit(0);
-		}
-		
 		
 		try
 	    {
 			 NameNode server = new NameNode();
-			 Util.readConfigurationFile(args[1], server);
-			 readDataNodes(args[2]);
+			 Util.readConfigurationFile(confPath, server);
+			 readDataNodes(dnPath);
 			 
 			 NameNodeI stub = (NameNodeI) exportObject(server, nameNodePort);
 			 
 			 Registry registry = LocateRegistry.getRegistry(registryHostname, registryPort);
-			 registry.bind(NameNodeServiceName, stub);
+			 registry.bind(nameNodeServiceName, stub);
 			 
 			 System.out.println ("NameNode ready!");
+			 
+			 server.checkTimer();
 	    }
 	    catch (Exception e)
 	    {
 	    	e.printStackTrace();
 	    }
+	}
+
+	@Override
+	public ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>> listFiles() throws RemoteException {
+		return Scheduler.getFiles();
+	}
+
+	@Override
+	public ConcurrentHashMap<String, HashSet<String>> listNodes()
+			throws RemoteException {
+		return Scheduler.getNodeToReplicas();
+	}
+
+	@Override
+	public void removeFile(String filename) throws RemoteException {
+		Scheduler.removeFile(filename);		
+		
+		Util.writeObject(nameNodePath+"files", Scheduler.getFiles());
+		Util.writeObject(nameNodePath + "nodeToReplicas", Scheduler.getNodeToReplicas());
 	}
 		
 }

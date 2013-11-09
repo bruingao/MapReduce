@@ -1,10 +1,13 @@
 package dfs;
 
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Date;
 import java.util.HashSet;
+import java.util.Random;
 
 import Common.Util;
 
@@ -14,6 +17,12 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 	 * 
 	 */
 	private static final long serialVersionUID = 2961863470847180775L;
+	
+	/* configuration file */
+	private static String confPath = "../conf/dfs.conf";
+	
+	/* datanode file */
+	private static String dnPath = "../conf/slaves";
 	
 	/* stored files' replicas (filename + chunk number) */
 	private static volatile HashSet<String> files
@@ -31,6 +40,8 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 	private static int registryPort;
 	
 	private static int dataNodePort;
+	
+	private static int nameNodePort;
 	
 	private static String dataNodeServiceName;
 	
@@ -79,6 +90,9 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		Util.writeBinaryToFile(content, temp);
 		
 		add_ts(files,filename);
+		
+		/* check point */
+		Util.writeObject(dataNodePath + "files", files);
 	}
 	
 	@Override
@@ -86,6 +100,9 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 				
 		remove_ts(files,filename);
 		
+		
+		/* check point */
+		Util.writeObject(dataNodePath + "files", files);
 	}
 
 	public static void readDataNodes(String filename) {
@@ -94,6 +111,8 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		for(int i = 0; i < lines.length; i++) {
 			add_ts(datanodes,lines[i]);
 		}
+		
+		Util.writeObject(dataNodePath + "datanodes",  datanodes);
 	}
 	
 	@Override
@@ -101,23 +120,41 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		return true;
 	}
 	
-	public static void main(String args[]) {
-		if (args.length < 2) {
-			System.out.println("Usage: DataNode [configuration file name] [data nodes info. file]");
-			System.exit(0);
+	@Override
+	public boolean replication(String filename, String[] nodes)
+			throws RemoteException {
+		Date date = new Date();
+		Random rand = new Random(date.getTime());
+		
+		int index = rand.nextInt()%nodes.length;
+		
+		Registry reg = LocateRegistry.getRegistry(nodes[index], dataNodePort);
+		try {
+			DataNodeI datanode = (DataNodeI)reg.lookup("rmi://"+nodes[index]+":"+dataNodePort+"/"+dataNodeServiceName);
+			byte[] content = datanode.read(filename);
+			this.write(filename, content);
+			return true;
+		} catch (NotBoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
 		}
+	}
+	
+	public static void main(String args[]) {
 		
 		try
 	    {
 			 DataNode datanode = new DataNode();
-			 Util.readConfigurationFile(args[1], datanode);
+			 Util.readConfigurationFile(confPath, datanode);
+			 readDataNodes(dnPath);
 			 
 			 DataNodeI stub = (DataNodeI) exportObject(datanode, dataNodePort);
 			 
 			 Registry registry = LocateRegistry.getRegistry(registryHostname, registryPort);
 			 registry.bind(dataNodeServiceName, stub);
 			 
-			 System.out.println ("NameNode ready!");
+			 System.out.println ("DataNode ready!");
 	    }
 	    catch (Exception e)
 	    {
