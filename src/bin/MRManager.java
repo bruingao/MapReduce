@@ -1,6 +1,5 @@
 package bin;
 
-import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -17,7 +16,7 @@ import Common.Util;
 public class MRManager {	
 	
 	/* configuration file */
-	private static String confName = "../conf/dfs.conf";
+	private static String confName = "conf/dfs.conf";
 	
 	/* service name read from configuration file */
 	private static String nameNodeServiceName;
@@ -26,22 +25,22 @@ public class MRManager {
 	private static String registryHostname;
 	
 	/* registry port number read from configuration file */
-	private static int registryPort;
+	private static Integer registryPort;
 	
 	/* the NameNode's port read from configuration file */
-	private static int nameNodePort;
+	private static Integer nameNodePort;
 	
 	/* name Node host name */
 	private static String nameNodeHostname;
 	
 	/* data node port number */
-	private static int dataNodePort;
+	private static Integer dataNodePort;
 	
 	/* data node service name */
 	private static String dataNodeServiceName;
 	
 	/* chunk size */
-	private static int chunksize;
+	private static Integer chunksize;
 	
 	private void doDfs(String[] cmds) throws RemoteException, Exception {
 		Registry registry;
@@ -50,7 +49,7 @@ public class MRManager {
 		registry = LocateRegistry.getRegistry(registryHostname, registryPort);
 		namenode = (NameNodeI)registry.lookup(nameNodeServiceName);
 		
-		String cmd = cmds[2];
+		String cmd = cmds[1];
 		
 		switch(cmd) {
 			case "listfile":
@@ -77,17 +76,17 @@ public class MRManager {
 				}
 				break;
 			case "import":
-				if(cmds.length < 4) {
+				if(cmds.length < 3) {
 					System.out.println("Please indicate the input file name");
 					break;
 				}
-				else if (cmds.length < 5) {
+				else if (cmds.length < 4) {
 					System.out.println("Please indicate the file name");
 					break;
 				}
 				
-				String inputname = cmds[3];
-				String filename = cmds[4];
+				String inputname = cmds[2];
+				String filename = cmds[3];
 				
 				int linesize = 0;
 				byte[] content = Util.readFromFile(inputname);
@@ -110,13 +109,20 @@ public class MRManager {
 					= namenode.writeFile(filename, chunknumber);
 				
 				if (res == null) {
-					System.out.println("The filename" +filename+ " is taken!Please choose another name!");
+					System.out.println("The filename " +filename+ " is taken!Please choose another name!");
+					namenode.writeSucess(filename, false);
+					break;
+				}
+				
+				if (res.size() == 0) {
+					System.out.println("There is no enough nodes for storing the data!");
+					namenode.writeSucess(filename, false);
 					break;
 				}
 				
 				for(int chunk : res.keySet()) {
 					for (String dnode : res.get(chunk)){
-						DataNodeI datanodeI = (DataNodeI)registry.lookup("rmi://"+dnode+":"+dataNodePort+"/"+dataNodeServiceName);
+						DataNodeI datanodeI = (DataNodeI)registry.lookup(dataNodeServiceName);
 						datanodeI.write(filename+chunk, Arrays.copyOfRange(content, chunk * csize, (chunk+1)*csize));
 					}
 				}
@@ -126,12 +132,12 @@ public class MRManager {
 				break;
 				
 			case "remove":
-				if(cmds.length < 4) {
+				if(cmds.length < 3) {
 					System.out.println("Please indicate the file name");
 					break;
 				}
 				
-				String fname = cmds[3];
+				String fname = cmds[2];
 				
 				HashMap<Integer, HashSet<String>> file
 					= namenode.open(fname);
@@ -143,7 +149,7 @@ public class MRManager {
 				
 				for(int chunk : file.keySet()) {
 					for (String dnode : file.get(chunk)){
-						DataNodeI datanodeI = (DataNodeI)registry.lookup("rmi://"+dnode+":"+dataNodePort+"/"+dataNodeServiceName);
+						DataNodeI datanodeI = (DataNodeI)registry.lookup(dataNodeServiceName);
 						datanodeI.removeFile(fname + chunk);
 					}
 				}
@@ -155,7 +161,7 @@ public class MRManager {
 	
 	
 	public static void main(String[] args) {
-		if (args.length < 3) {
+		if (args.length < 2) {
 			System.out.println("Usage: MRManager [dfs or jobtracker] [Job Name] <other arguments>");
 			System.exit(0);
 		}
@@ -164,7 +170,7 @@ public class MRManager {
 		
 		Util.readConfigurationFile(confName, server);
 		
-		switch(args[1]) {
+		switch(args[0]) {
 			case "dfs":
 				try {
 					server.doDfs(args);

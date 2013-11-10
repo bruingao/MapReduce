@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 /**
  * Util is a utility class for our program. It compute the hash code of a givin method.
@@ -69,7 +70,7 @@ public final class Util {
 	public static byte[] readFromFile(String filename) {
 		File newfile = new File(filename);
 		if(!newfile.exists()) {
-			System.out.println("File not exist!");
+			System.out.println("File " +filename+" not exist!");
 			return null;
 		} 
 		FileInputStream in = null;
@@ -140,7 +141,13 @@ public final class Util {
 	
 	
 	public static void readConfigurationFile(String filename, Object obj) {
-		String content = Util.readFromFile(filename).toString();
+		String content = null;
+		try {
+			content = new String(Util.readFromFile(filename), "UTF-8");
+		} catch (UnsupportedEncodingException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		String lines[] = content.split("\n");
 		for(String line : lines) {
 			String temp[] = Util.parseLine(line, "=");
@@ -148,10 +155,12 @@ public final class Util {
 			try {
 				Field field = obj.getClass().getDeclaredField(temp[0]);
 				field.setAccessible(true);
-				if(field.getType().equals(Integer.class)) {
+				if(field.getType().isPrimitive()){
 					field.setInt(obj, Integer.parseInt(temp[1]));
 				} else if (field.getType().equals(String.class)) {
 					field.set(obj, temp[1]);
+				} else if (field.getType().equals(Integer.class)) {
+					field.set(obj, Integer.parseInt(temp[1]));
 				}
 			} catch (NoSuchFieldException e){
 				
@@ -203,7 +212,7 @@ public final class Util {
 	public static Object readObject(String filename) {
 		File newfile = new File(filename);
 		if(!newfile.exists()) {
-			System.out.println("File not exist!");
+			System.out.println("File "+filename+" not exist!");
 			return null;
 		} 
 		FileInputStream in = null;

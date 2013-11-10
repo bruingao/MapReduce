@@ -1,5 +1,6 @@
 package dfs;
 
+import java.io.UnsupportedEncodingException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -23,13 +24,13 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	private static final long serialVersionUID = 7921414827247184085L;
 
 	/* configuration file */
-	private static String confPath = "../conf/dfs.conf";
+	private static String confPath = "src/conf/dfs.conf";
 	
 	/* datanode file */
-	private static String dnPath = "../conf/slaves";
+	private static String dnPath = "src/conf/slaves";
 	
 	/* replication factor read from configuration file */
-	private static int replicaFactor;
+	private static Integer replicaFactor;
 	
 	/* service name read from configuration file */
 	private static String nameNodeServiceName;
@@ -38,16 +39,16 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	private static String registryHostname;
 	
 	/* registry port number read from configuration file */
-	private static int registryPort;
+	private static Integer registryPort;
 	
 	/* the NameNode's port read from configuration file */
-	private static int nameNodePort;
+	private static Integer nameNodePort;
 	
 	/* the dataNode's port number */
-	private static int dataNodePort;
+	private static Integer dataNodePort;
 	
 	/* chunk size */
-	private static int chunksize;	
+	private static Integer chunksize;	
 	
 	/* datanode service name */
 	private static String dataNodeServiceName;
@@ -55,10 +56,11 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	/* namenode tmp file path */
 	public static String nameNodePath;
 	
+	public static Registry registry;
+	
 	private static ExecutorService executor = Executors.newCachedThreadPool();
 	
 	public NameNode() throws RemoteException{
-		Init();
 	}
 	
 	private void Init() {
@@ -83,7 +85,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	/* check data nodes */
 	public void checkDataNodes(){
 		for (String host : Scheduler.getStatus().keySet()) {
-			checkThread ct = new checkThread(host, dataNodePort, dataNodeServiceName, registryHostname, registryPort);
+			checkThread ct = new checkThread(host, dataNodePort, dataNodeServiceName);
 			ct.setOp(checkThread.OP.STATUS);
 			executor.execute(ct);
 		}
@@ -107,7 +109,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 					String res[] = Scheduler.chooseHeavy(cnt-replicaFactor, (String[])candidates.toArray());
 					
 					for (String r : res) {
-						checkThread t = new checkThread(r, dataNodePort, dataNodeServiceName, registryHostname, registryPort);
+						checkThread t = new checkThread(r, dataNodePort, dataNodeServiceName);
 						t.setFilename(name);
 						t.setChunknumber(i);
 						t.setOp(checkThread.OP.DELETE);
@@ -121,11 +123,11 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 						if(r == null)
 							break;
 						
-						checkThread t = new checkThread(r, dataNodePort, dataNodeServiceName, registryHostname, registryPort);
+						checkThread t = new checkThread(r, dataNodePort, dataNodeServiceName);
 						t.setFilename(name);
 						t.setChunknumber(i);
 						t.setOp(checkThread.OP.WRITE);
-						t.setNodes((String[]) candidates.toArray());
+						t.setNodes( (String[]) candidates.toArray());
 						executor.execute(t);
 					}
 				}
@@ -141,7 +143,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 		HashMap<Integer, HashSet<String>> res = Scheduler.createFile(filename, num, replicaFactor);
 		
 		/* check point */
-		Util.writeObject(nameNodePath + filename, Scheduler.getTempFiles());
+		Util.writeObject(nameNodePath + "tempfiles", Scheduler.getTempFiles());
 		
 		return res;
 	}
@@ -156,22 +158,31 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 
 	@Override
 	public void writeSucess(String filename, boolean res) throws RemoteException {
-		if(res)
+		if(res) {
 			Scheduler.transferTemp(filename);
-		else
+			Util.writeObject(NameNode.nameNodePath+"files", Scheduler.getFiles());
+			Util.writeObject(NameNode.nameNodePath + "nodeToReplicas", Scheduler.getNodeToReplicas());
+		}
+		else {
 			Scheduler.deleteTemp(filename);
+		}
 		
 		/* check point */
-		Util.writeObject(NameNode.nameNodePath+"files", Scheduler.getFiles());
-		Util.writeObject(NameNode.nameNodePath+"tempFiles", Scheduler.getTempFiles());
+		Util.writeObject(NameNode.nameNodePath+"tempfiles", Scheduler.getTempFiles());
 	}
 	
 	public static void readDataNodes(String filename) {
-		String content = Util.readFromFile(filename).toString();
+		String content = null;
+		try {
+			content = new String(Util.readFromFile(filename), "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		String lines[] = content.split("\n");
 		for(int i = 0; i < lines.length; i++) {
 			Scheduler.getStatus().put(lines[i], false);
-			Scheduler.getNodeToReplicas().put(lines[i], null);
+			Scheduler.getNodeToReplicas().put(lines[i], new HashSet<String>());
 		}
 	}
 	
@@ -193,12 +204,16 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	    {
 			 NameNode server = new NameNode();
 			 Util.readConfigurationFile(confPath, server);
+			 
+			 server.Init();
+			 
 			 readDataNodes(dnPath);
 			 
+			 unexportObject(server, false);
 			 NameNodeI stub = (NameNodeI) exportObject(server, nameNodePort);
 			 
-			 Registry registry = LocateRegistry.getRegistry(registryHostname, registryPort);
-			 registry.bind(nameNodeServiceName, stub);
+			 registry = LocateRegistry.createRegistry(registryPort);
+			 registry.rebind(nameNodeServiceName, stub);
 			 
 			 System.out.println ("NameNode ready!");
 			 

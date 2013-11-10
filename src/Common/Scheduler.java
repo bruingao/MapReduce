@@ -115,6 +115,9 @@ public final class Scheduler {
 		if(nodes == null)
 			nodes = (String[]) nodeToReplicas.keySet().toArray();
 		
+		if(nodes.length < num){
+			return nodes;
+		}
 		
 		String res[] = new String[num];
 		int sizes[] = new int[num];
@@ -150,16 +153,17 @@ public final class Scheduler {
 	public static HashMap<Integer, HashSet<String>> createFile(String filename, int chunks, int replicas) {
 		if(checkname(filename))
 			return null;
-		
-		int num = chunks * replicas;
-		String set[] = chooseLight(num, null);
-		
+				
 		HashMap<Integer, HashSet<String>> res = new HashMap<Integer, HashSet<String>>();
 		
 		for(int i = 0; i < chunks; i++) {
+			String set[] = chooseLight(replicas, null);
 			HashSet<String> temp = new HashSet<String>();
 			for(int j = 0; j < replicas; j++) {
-				temp.add(set[i*replicas + j]);
+				if(set[j] != null)
+					temp.add(set[j]);
+				else 
+					return new HashMap<Integer, HashSet<String>>();
 			}
 			res.put(i, temp);
 		}
@@ -167,7 +171,6 @@ public final class Scheduler {
 		tempFiles.put(filename, res);
 				
 		return res;
-		
 	}
 	
 	public static void replication (String filename, int chunknumber, String node) {
@@ -184,8 +187,16 @@ public final class Scheduler {
 	
 	public static void transferTemp(String filename) {
 		
-		files.put(filename, tempFiles.remove(filename));
-	
+		HashMap<Integer,HashSet<String>> res = tempFiles.remove(filename);
+		
+		files.put(filename, res);
+		
+		for(Integer chunk : res.keySet()) {
+			for (String node : res.get(chunk)) {
+				nodeToReplicas.get(node).add(filename+chunk);
+			}
+		}
+		
 	}
 	
 	public static void deleteTemp(String filename) {

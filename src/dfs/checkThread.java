@@ -1,6 +1,4 @@
 package dfs;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 
 import Common.Scheduler;
 import Common.Util;
@@ -10,8 +8,6 @@ public class checkThread implements Runnable{
 	private String dnode;
 	private int dnodeport;
 	private String serviceName;
-	private String registryAddress;
-	private int registryPort;
 	
 	private OP op;
 
@@ -23,13 +19,11 @@ public class checkThread implements Runnable{
 
 	public enum OP  {WRITE, STATUS, DELETE};
 	
-	public checkThread(String dn, int dnp, String sname, String ra, int rp)
+	public checkThread(String dn, int dnp, String sname)
 	{
 		dnode = dn;
 		dnodeport = dnp;
 		serviceName = sname;
-		registryAddress = ra;
-		registryPort = rp;
 	}
 	
 	public void setChunknumber(int chunknumber) {
@@ -66,26 +60,28 @@ public class checkThread implements Runnable{
 	}
 	
 	private void checkStatus() {
-		Registry registry;
 		boolean status = false;
 		try {
-			registry = LocateRegistry.getRegistry(registryAddress, registryPort);
-			DataNodeI datanode = (DataNodeI) registry.lookup("rmi://"+dnode+dnodeport+"/"+serviceName);
+			DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(serviceName);
 			status = datanode.heartBeat();
+			
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			if (e instanceof java.rmi.NotBoundException) {
+				System.out.println("Datanode "+dnode+" not startup.");
+			}
+			else {
+				e.printStackTrace();
+			}
 		} finally {
 			Scheduler.getStatus().put(dnode, status);
 		}
 	}
 	
 	private void write() {
-		Registry registry;
 		try {
-			registry = LocateRegistry.getRegistry(registryAddress, registryPort);
-			DataNodeI datanode = (DataNodeI) registry.lookup("rmi://"+dnode+dnodeport+"/"+serviceName);
+			DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(serviceName);
 			boolean res = datanode.replication(filename + chunknumber, nodes);
 			
 			if (res) {
@@ -96,16 +92,18 @@ public class checkThread implements Runnable{
 			}
 			
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			if (e instanceof java.rmi.NotBoundException) {
+				System.out.println("Datanode "+dnode+" not startup.");
+			}
+			else {
+				e.printStackTrace();
+			}
 		} 
 	}
 	
 	private void delete() {
-		Registry registry;
 		try {
-			registry = LocateRegistry.getRegistry(registryAddress, registryPort);
-			DataNodeI datanode = (DataNodeI) registry.lookup("rmi://"+dnode+dnodeport+"/"+serviceName);
+			DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(serviceName);
 			datanode.removeFile(filename + chunknumber);
 			
 			Scheduler.removeReplica(filename, chunknumber, dnode);
@@ -114,8 +112,12 @@ public class checkThread implements Runnable{
 			Util.writeObject(NameNode.nameNodePath+"nodeToReplicas", Scheduler.getNodeToReplicas());
 
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			if (e instanceof java.rmi.NotBoundException) {
+				System.out.println("Datanode "+dnode+" not startup.");
+			}
+			else {
+				e.printStackTrace();
+			}
 		} 
 	}
 
