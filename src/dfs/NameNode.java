@@ -243,5 +243,17 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 		Util.writeObject(nameNodePath+"files", dfsScheduler.getFiles());
 		Util.writeObject(nameNodePath + "nodeToReplicas", dfsScheduler.getNodeToReplicas());
 	}
+
+    @Override	
+	public void proxyRebind(String dataNodeServiceName, DataNodeI datanode) throws RemoteException {
+	    try
+	    {
+            this.registry.rebind(dataNodeServiceName, datanode);
+        }
+        catch (Exception e)
+	    {
+	    	e.printStackTrace();
+	    }
+	}
 		
 }

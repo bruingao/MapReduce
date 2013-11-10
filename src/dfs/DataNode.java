@@ -48,6 +48,8 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 	
 	private static String dataNodeServiceName;
 	
+	private static String nameNodeServiceName;
+	
 	private static void add_ts(HashSet<String> obj, String filename) {
 		synchronized(obj) {
 			files.add(filename);
@@ -161,10 +163,13 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 			 DataNodeI stub = (DataNodeI) exportObject(datanode, dataNodePort);
 			 
 			 registry = LocateRegistry.getRegistry(registryHostname, registryPort);
-			 System.out.println(dataNodeServiceName);
-			 registry.rebind(dataNodeServiceName, stub);
+			 NameNodeI namenode = (NameNodeI)registry.lookup("rmi://"+registryHostname+":"+registryPort+"/"+nameNodeServiceName);
+			 namenode.proxyRebind(dataNodeServiceName, stub);
 			 
-			 System.out.println ("DataNode ready!");
+			 //System.out.println(dataNodeServiceName);
+			 //registry.rebind(dataNodeServiceName, stub);
+			 
+			 //System.out.println ("DataNode ready!");
 	    }
 	    catch (Exception e)
 	    {

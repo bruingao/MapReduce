@@ -169,7 +169,7 @@ public class MRManager {
 		MRManager server = new MRManager();
 		
 		Util.readConfigurationFile(confName, server);
-		
+		//System.out.println(args);
 		switch(args[0]) {
 			case "dfs":
 				try {
