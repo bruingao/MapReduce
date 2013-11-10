@@ -20,10 +20,10 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 	private static final long serialVersionUID = 2961863470847180775L;
 	
 	/* configuration file */
-	private static String confPath = "src/conf/dfs.conf";
+	private static String confPath = "conf/dfs.conf";
 	
 	/* datanode file */
-	private static String dnPath = "src/conf/slaves";
+	private static String dnPath = "conf/slaves";
 	
 	private static  Registry registry;
 	

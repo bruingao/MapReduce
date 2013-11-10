@@ -24,10 +24,10 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	private static final long serialVersionUID = 7921414827247184085L;
 
 	/* configuration file */
-	private static String confPath = "src/conf/dfs.conf";
+	private static String confPath = "conf/dfs.conf";
 	
 	/* datanode file */
-	private static String dnPath = "src/conf/slaves";
+	private static String dnPath = "conf/slaves";
 	
 	/* replication factor read from configuration file */
 	private static Integer replicaFactor;
