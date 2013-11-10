@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import Common.Scheduler;
+import Common.dfsScheduler;
 import Common.Util;
 
 public class NameNode extends UnicastRemoteObject implements NameNodeI{
@@ -67,15 +67,15 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 		/* read checkpoint */
 		Object obj = Util.readObject(nameNodePath+"files");
 		if (obj != null)
-			Scheduler.setFiles((ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>>) obj);
+			dfsScheduler.setFiles((ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>>) obj);
 		
 		obj = Util.readObject(nameNodePath+"nodeToReplicas");
 		if (obj != null)
-			Scheduler.setNodeToReplicas((ConcurrentHashMap<String, HashSet<String>>) obj);
+			dfsScheduler.setNodeToReplicas((ConcurrentHashMap<String, HashSet<String>>) obj);
 		
 		obj = Util.readObject(nameNodePath+"tempfiles");
 		if (obj != null)
-			Scheduler.setTempFiles((ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>>) obj);
+			dfsScheduler.setTempFiles((ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>>) obj);
 	}
 	
 	
@@ -84,7 +84,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	
 	/* check data nodes */
 	public void checkDataNodes(){
-		for (String host : Scheduler.getStatus().keySet()) {
+		for (String host : dfsScheduler.getStatus().keySet()) {
 			checkThread ct = new checkThread(host, dataNodePort, dataNodeServiceName);
 			ct.setOp(checkThread.OP.STATUS);
 			executor.execute(ct);
@@ -93,20 +93,20 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	
 	/* check file replication */
 	public void checkreplication() {
-		for (String name : Scheduler.getFiles().keySet()) {
-			HashMap<Integer, HashSet<String>> map = Scheduler.getFiles().get(name);
+		for (String name : dfsScheduler.getFiles().keySet()) {
+			HashMap<Integer, HashSet<String>> map = dfsScheduler.getFiles().get(name);
 			for (Integer i : map.keySet()) {
 				int cnt  = 0;
 				HashSet<String> candidates = new HashSet<String>();
 				for (String datanode : map.get(i)) {
-					if(Scheduler.getStatus().get(datanode)) {
+					if(dfsScheduler.getStatus().get(datanode)) {
 						cnt++;
 						candidates.add(datanode);
 					}
 				}
 				if (cnt > replicaFactor) {
 
-					String res[] = Scheduler.chooseHeavy(cnt-replicaFactor, (String[])candidates.toArray());
+					String res[] = dfsScheduler.chooseHeavy(cnt-replicaFactor, (String[])candidates.toArray());
 					
 					for (String r : res) {
 						checkThread t = new checkThread(r, dataNodePort, dataNodeServiceName);
@@ -117,7 +117,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 					}
 				}
 				else if (cnt < replicaFactor) {
-					String res[] = Scheduler.chooseLight(replicaFactor - cnt, candidates);
+					String res[] = dfsScheduler.chooseLight(replicaFactor - cnt, candidates);
 					
 					for (String r : res) {
 						if(r == null)
@@ -140,10 +140,10 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	public HashMap<Integer, HashSet<String>> writeFile(String filename, int num)
 			throws RemoteException {
 		
-		HashMap<Integer, HashSet<String>> res = Scheduler.createFile(filename, num, replicaFactor);
+		HashMap<Integer, HashSet<String>> res = dfsScheduler.createFile(filename, num, replicaFactor);
 		
 		/* check point */
-		Util.writeObject(nameNodePath + "tempfiles", Scheduler.getTempFiles());
+		Util.writeObject(nameNodePath + "tempfiles", dfsScheduler.getTempFiles());
 		
 		return res;
 	}
@@ -153,22 +153,22 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 			throws RemoteException {
 
 		/* TaskTacker call this method to get the files' relica places */
-		return Scheduler.getFile(filename);
+		return dfsScheduler.getFile(filename);
 	}
 
 	@Override
 	public void writeSucess(String filename, boolean res) throws RemoteException {
 		if(res) {
-			Scheduler.transferTemp(filename);
-			Util.writeObject(NameNode.nameNodePath+"files", Scheduler.getFiles());
-			Util.writeObject(NameNode.nameNodePath + "nodeToReplicas", Scheduler.getNodeToReplicas());
+			dfsScheduler.transferTemp(filename);
+			Util.writeObject(NameNode.nameNodePath+"files", dfsScheduler.getFiles());
+			Util.writeObject(NameNode.nameNodePath + "nodeToReplicas", dfsScheduler.getNodeToReplicas());
 		}
 		else {
-			Scheduler.deleteTemp(filename);
+			dfsScheduler.deleteTemp(filename);
 		}
 		
 		/* check point */
-		Util.writeObject(NameNode.nameNodePath+"tempfiles", Scheduler.getTempFiles());
+		Util.writeObject(NameNode.nameNodePath+"tempfiles", dfsScheduler.getTempFiles());
 	}
 	
 	public static void readDataNodes(String filename) {
@@ -181,8 +181,8 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 		}
 		String lines[] = content.split("\n");
 		for(int i = 0; i < lines.length; i++) {
-			Scheduler.getStatus().put(lines[i], false);
-			Scheduler.getNodeToReplicas().put(lines[i], new HashSet<String>());
+			dfsScheduler.getStatus().put(lines[i], false);
+			dfsScheduler.getNodeToReplicas().put(lines[i], new HashSet<String>());
 		}
 	}
 	
@@ -227,21 +227,21 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 
 	@Override
 	public ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>> listFiles() throws RemoteException {
-		return Scheduler.getFiles();
+		return dfsScheduler.getFiles();
 	}
 
 	@Override
 	public ConcurrentHashMap<String, HashSet<String>> listNodes()
 			throws RemoteException {
-		return Scheduler.getNodeToReplicas();
+		return dfsScheduler.getNodeToReplicas();
 	}
 
 	@Override
 	public void removeFile(String filename) throws RemoteException {
-		Scheduler.removeFile(filename);		
+		dfsScheduler.removeFile(filename);		
 		
-		Util.writeObject(nameNodePath+"files", Scheduler.getFiles());
-		Util.writeObject(nameNodePath + "nodeToReplicas", Scheduler.getNodeToReplicas());
+		Util.writeObject(nameNodePath+"files", dfsScheduler.getFiles());
+		Util.writeObject(nameNodePath + "nodeToReplicas", dfsScheduler.getNodeToReplicas());
 	}
 		
 }

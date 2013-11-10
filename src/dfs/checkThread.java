@@ -1,6 +1,6 @@
 package dfs;
 
-import Common.Scheduler;
+import Common.dfsScheduler;
 import Common.Util;
 
 public class checkThread implements Runnable{
@@ -75,7 +75,7 @@ public class checkThread implements Runnable{
 				e.printStackTrace();
 			}
 		} finally {
-			Scheduler.getStatus().put(dnode, status);
+			dfsScheduler.getStatus().put(dnode, status);
 		}
 	}
 	
@@ -85,10 +85,10 @@ public class checkThread implements Runnable{
 			boolean res = datanode.replication(filename + chunknumber, nodes);
 			
 			if (res) {
-				Scheduler.replication(filename, chunknumber, dnode);
+				dfsScheduler.replication(filename, chunknumber, dnode);
 				/* checkpoint */
-				Util.writeObject(NameNode.nameNodePath+"files", Scheduler.getFiles());
-				Util.writeObject(NameNode.nameNodePath+"nodeToReplicas", Scheduler.getNodeToReplicas());
+				Util.writeObject(NameNode.nameNodePath+"files", dfsScheduler.getFiles());
+				Util.writeObject(NameNode.nameNodePath+"nodeToReplicas", dfsScheduler.getNodeToReplicas());
 			}
 			
 		} catch (Exception e) {
@@ -106,10 +106,10 @@ public class checkThread implements Runnable{
 			DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(serviceName);
 			datanode.removeFile(filename + chunknumber);
 			
-			Scheduler.removeReplica(filename, chunknumber, dnode);
+			dfsScheduler.removeReplica(filename, chunknumber, dnode);
 			/* checkpoint */
-			Util.writeObject(NameNode.nameNodePath+"files", Scheduler.getFiles());
-			Util.writeObject(NameNode.nameNodePath+"nodeToReplicas", Scheduler.getNodeToReplicas());
+			Util.writeObject(NameNode.nameNodePath+"files", dfsScheduler.getFiles());
+			Util.writeObject(NameNode.nameNodePath+"nodeToReplicas", dfsScheduler.getNodeToReplicas());
 
 		} catch (Exception e) {
 			if (e instanceof java.rmi.NotBoundException) {
