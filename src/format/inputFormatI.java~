@@ -1,0 +1,20 @@
+package format;
+
+import java.util.*;
+
+public abstract class inputFormatI{
+    
+    public class kvPair {
+        public String key;
+        public String value;
+
+        public kvPair(String key, String value) {
+            this.key = key;
+            this.value = value;
+        }
+    }
+    
+    List<kvPair> kvPairs = new ArrayList<kvPair>();
+
+    public abstract List<kvPair> getkvPairs(String content);
+}
