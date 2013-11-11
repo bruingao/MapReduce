@@ -77,9 +77,11 @@ public class checkThread implements Runnable{
 			if (e instanceof java.rmi.NotBoundException) {
 				System.out.println("Datanode "+dnode+" not startup.");
 			}
+			/*
 			else if(e instanceof java.rmi.ConnectionException){
 			    
 			}
+			*/
 			else {
 				e.printStackTrace();
 			}
@@ -106,9 +108,11 @@ public class checkThread implements Runnable{
 			if (e instanceof java.rmi.NotBoundException) {
 				System.out.println("Datanode "+dnode+" not startup.");
 			}
+			/*
 			else if(e instanceof java.rmi.ConnectionException){
 			    
 			}
+			*/
 			else {
 				e.printStackTrace();
 			}
@@ -130,9 +134,11 @@ public class checkThread implements Runnable{
 			if (e instanceof java.rmi.NotBoundException) {
 				System.out.println("Datanode "+dnode+" not startup.");
 			}
+			/*
 			else if(e instanceof java.rmi.ConnectionException){
 			    
 			}
+			*/
 			else {
 				e.printStackTrace();
 			}
