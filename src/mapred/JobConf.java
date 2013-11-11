@@ -9,34 +9,34 @@ public class JobConf implements Serializable{
 	 */
 	private static final long serialVersionUID = 870609109352931265L;
 	
-	private static Class<?> mapperClass;
-	private static Class<?> reducerClass;
+	private Class<?> mapperClass;
+	private Class<?> reducerClass;
 	
-	private static String inputfile;
-	private static String outputfile;
+	private String inputfile;
+	private String outputfile;
 	
-	public static Class<?> getMapperClass() {
+	public Class<?> getMapperClass() {
 		return mapperClass;
 	}
-	public static void setMapperClass(Class<?> mapperClass) {
-		JobConf.mapperClass = mapperClass;
+	public void setMapperClass(Class<?> mapperClass) {
+		this.mapperClass = mapperClass;
 	}
-	public static Class<?> getReducerClass() {
+	public Class<?> getReducerClass() {
 		return reducerClass;
 	}
-	public static void setReducerClass(Class<?> reducerClass) {
-		JobConf.reducerClass = reducerClass;
+	public void setReducerClass(Class<?> reducerClass) {
+		this.reducerClass = reducerClass;
 	}
-	public static String getInputfile() {
+	public String getInputfile() {
 		return inputfile;
 	}
-	public static void setInputfile(String inputfile) {
-		JobConf.inputfile = inputfile;
+	public void setInputfile(String inputfile) {
+		this.inputfile = inputfile;
 	}
-	public static String getOutputfile() {
+	public String getOutputfile() {
 		return outputfile;
 	}
-	public static void setOutputfile(String outputfile) {
-		JobConf.outputfile = outputfile;
+	public void setOutputfile(String outputfile) {
+		this.outputfile = outputfile;
 	}
 }

@@ -69,7 +69,7 @@ public final class dfsScheduler {
 		return files.get(filename);
 	}
 	
-	private static boolean checkname(String filename) {
+	public static boolean checkname(String filename) {
 		return files.containsKey(filename) || tempFiles.containsKey(filename); 
 	}
 	

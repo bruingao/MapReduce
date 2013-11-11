@@ -16,7 +16,7 @@ import Common.Util;
 public class MRManager {	
 	
 	/* configuration file */
-	private static String confName = "conf/dfs.conf";
+	private static String confName = "src/conf/dfs.conf";
 	
 	/* service name read from configuration file */
 	private static String nameNodeServiceName;
@@ -38,8 +38,7 @@ public class MRManager {
 		NameNodeI namenode = null;
 		
 		registry = LocateRegistry.getRegistry(registryHostname, registryPort);
-		//namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
-		namenode = (NameNodeI)registry.lookup(nameNodeServiceName);
+		namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
 		
 		String cmd = cmds[1];
 		
@@ -114,8 +113,7 @@ public class MRManager {
 				
 				for(int chunk : res.keySet()) {
 					for (String dnode : res.get(chunk)){
-					    Registry dnRegistry=LocateRegistry.getRegistry(dnode,registryPort);
-						DataNodeI datanodeI = (DataNodeI)dnRegistry.lookup(dataNodeServiceName);
+						DataNodeI datanodeI = (DataNodeI)registry.lookup(dnode+"/"+dataNodeServiceName);
 						datanodeI.write(filename+chunk, Arrays.copyOfRange(content, chunk * csize, (chunk+1)*csize));
 					}
 				}
@@ -142,8 +140,7 @@ public class MRManager {
 				
 				for(int chunk : file.keySet()) {
 					for (String dnode : file.get(chunk)){
-					    Registry dnRegistry=LocateRegistry.getRegistry(dnode,registryPort);
-						DataNodeI datanodeI = (DataNodeI)dnRegistry.lookup(dataNodeServiceName);
+						DataNodeI datanodeI = (DataNodeI)registry.lookup(dnode+"/"+dataNodeServiceName);
 						datanodeI.removeFile(fname + chunk);
 					}
 				}
