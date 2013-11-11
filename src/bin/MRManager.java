@@ -16,7 +16,7 @@ import Common.Util;
 public class MRManager {	
 	
 	/* configuration file */
-	private static String confName = "conf/dfs.conf";
+	private static String confName = "src/conf/dfs.conf";
 	
 	/* service name read from configuration file */
 	private static String nameNodeServiceName;
@@ -26,16 +26,7 @@ public class MRManager {
 	
 	/* registry port number read from configuration file */
 	private static Integer registryPort;
-	
-	/* the NameNode's port read from configuration file */
-	private static Integer nameNodePort;
-	
-	/* name Node host name */
-	private static String nameNodeHostname;
-	
-	/* data node port number */
-	private static Integer dataNodePort;
-	
+				
 	/* data node service name */
 	private static String dataNodeServiceName;
 	
@@ -47,7 +38,7 @@ public class MRManager {
 		NameNodeI namenode = null;
 		
 		registry = LocateRegistry.getRegistry(registryHostname, registryPort);
-		namenode = (NameNodeI)registry.lookup(nameNodeServiceName);
+		namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
 		
 		String cmd = cmds[1];
 		
@@ -122,7 +113,7 @@ public class MRManager {
 				
 				for(int chunk : res.keySet()) {
 					for (String dnode : res.get(chunk)){
-						DataNodeI datanodeI = (DataNodeI)registry.lookup(dataNodeServiceName);
+						DataNodeI datanodeI = (DataNodeI)registry.lookup(dnode+"/"+dataNodeServiceName);
 						datanodeI.write(filename+chunk, Arrays.copyOfRange(content, chunk * csize, (chunk+1)*csize));
 					}
 				}
@@ -149,7 +140,7 @@ public class MRManager {
 				
 				for(int chunk : file.keySet()) {
 					for (String dnode : file.get(chunk)){
-						DataNodeI datanodeI = (DataNodeI)registry.lookup(dataNodeServiceName);
+						DataNodeI datanodeI = (DataNodeI)registry.lookup(dnode+"/"+dataNodeServiceName);
 						datanodeI.removeFile(fname + chunk);
 					}
 				}
@@ -169,7 +160,7 @@ public class MRManager {
 		MRManager server = new MRManager();
 		
 		Util.readConfigurationFile(confName, server);
-		//System.out.println(args);
+		
 		switch(args[0]) {
 			case "dfs":
 				try {

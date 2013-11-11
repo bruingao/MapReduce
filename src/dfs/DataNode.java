@@ -1,6 +1,7 @@
 package dfs;
 
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -20,10 +21,10 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 	private static final long serialVersionUID = 2961863470847180775L;
 	
 	/* configuration file */
-	private static String confPath = "conf/dfs.conf";
+	private static String confPath = "src/conf/dfs.conf";
 	
 	/* datanode file */
-	private static String dnPath = "conf/slaves";
+	private static String dnPath = "src/conf/slaves";
 	
 	private static  Registry registry;
 	
@@ -43,9 +44,7 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 	private static Integer registryPort;
 	
 	private static Integer dataNodePort;
-	
-	private static Integer nameNodePort;
-	
+		
 	private static String dataNodeServiceName;
 	
 	private static String nameNodeServiceName;
@@ -63,7 +62,6 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 	}
 	
 	public DataNode() throws RemoteException{
-		Init();
 	}
 	
 	/* init work */
@@ -72,9 +70,11 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		if(obj != null)
 			files = (HashSet<String>) obj;
 		
-		obj = Util.readObject(dataNodePath + "datanodes");
-		if(obj != null)
-			datanodes = (HashSet<String>) obj;
+//		obj = Util.readObject(dataNodePath + "datanodes");
+//		if(obj != null)
+//			datanodes = (HashSet<String>) obj;
+//		else
+//			Util.writeObject(dataNodePath+"datanodes", datanodes);
 	}
 	
 	/* read the corresponding chunk according to the filename */
@@ -121,9 +121,7 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		String lines[] = content.split("\n");
 		for(int i = 0; i < lines.length; i++) {
 			add_ts(datanodes,lines[i]);
-		}
-		
-		Util.writeObject(dataNodePath + "datanodes",  datanodes);
+		}	
 	}
 	
 	@Override
@@ -140,7 +138,7 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		int index = rand.nextInt()%nodes.length;
 		
 		try {
-			DataNodeI datanode = (DataNodeI)registry.lookup("rmi://"+nodes[index]+":"+dataNodePort+"/"+dataNodeServiceName);
+			DataNodeI datanode = (DataNodeI)registry.lookup(nodes[index]+"/"+dataNodeServiceName);
 			byte[] content = datanode.read(filename);
 			this.write(filename, content);
 			return true;
@@ -158,13 +156,19 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 			 DataNode datanode = new DataNode();
 			 Util.readConfigurationFile(confPath, datanode);
 			 readDataNodes(dnPath);
-			 
+			 datanode.Init();
+
 			 unexportObject(datanode, false);
 			 DataNodeI stub = (DataNodeI) exportObject(datanode, dataNodePort);
 			 
 			 registry = LocateRegistry.getRegistry(registryHostname, registryPort);
-			 NameNodeI namenode = (NameNodeI)registry.lookup("rmi://"+registryHostname+":"+registryPort+"/"+nameNodeServiceName);
-			 namenode.proxyRebind(dataNodeServiceName, stub);
+			 NameNodeI namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
+			 
+			 InetAddress address = InetAddress.getLocalHost();
+			 
+			 System.out.println(address.getHostAddress());
+			 
+			 namenode.proxyRebind(address.getHostAddress()+"/"+dataNodeServiceName, stub);
 			 
 			 //System.out.println(dataNodeServiceName);
 			 //registry.rebind(dataNodeServiceName, stub);

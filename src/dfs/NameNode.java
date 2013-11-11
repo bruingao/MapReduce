@@ -24,10 +24,10 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	private static final long serialVersionUID = 7921414827247184085L;
 
 	/* configuration file */
-	private static String confPath = "conf/dfs.conf";
+	private static String confPath = "src/conf/dfs.conf";
 	
 	/* datanode file */
-	private static String dnPath = "conf/slaves";
+	private static String dnPath = "src/conf/slaves";
 	
 	/* replication factor read from configuration file */
 	private static Integer replicaFactor;
@@ -46,10 +46,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	
 	/* the dataNode's port number */
 	private static Integer dataNodePort;
-	
-	/* chunk size */
-	private static Integer chunksize;	
-	
+		
 	/* datanode service name */
 	private static String dataNodeServiceName;
 	
@@ -142,8 +139,9 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 		
 		HashMap<Integer, HashSet<String>> res = dfsScheduler.createFile(filename, num, replicaFactor);
 		
-		/* check point */
-		Util.writeObject(nameNodePath + "tempfiles", dfsScheduler.getTempFiles());
+		if (res.size() > 0)
+			/* check point */
+			Util.writeObject(nameNodePath + "tempfiles", dfsScheduler.getTempFiles());
 		
 		return res;
 	}
@@ -204,16 +202,15 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	    {
 			 NameNode server = new NameNode();
 			 Util.readConfigurationFile(confPath, server);
-			 
-			 server.Init();
-			 
+			 			 
 			 readDataNodes(dnPath);
-			 
+			 server.Init();
+
 			 unexportObject(server, false);
 			 NameNodeI stub = (NameNodeI) exportObject(server, nameNodePort);
 			 
 			 registry = LocateRegistry.createRegistry(registryPort);
-			 registry.rebind(nameNodeServiceName, stub);
+			 registry.rebind(registryHostname + "/" + nameNodeServiceName, stub);
 			 
 			 System.out.println ("NameNode ready!");
 			 
@@ -248,7 +245,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	public void proxyRebind(String dataNodeServiceName, DataNodeI datanode) throws RemoteException {
 	    try
 	    {
-            this.registry.rebind(dataNodeServiceName, datanode);
+            registry.rebind(dataNodeServiceName, datanode);
         }
         catch (Exception e)
 	    {

@@ -62,7 +62,7 @@ public class checkThread implements Runnable{
 	private void checkStatus() {
 		boolean status = false;
 		try {
-			DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(serviceName);
+			DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(dnode+"/"+serviceName);
 			status = datanode.heartBeat();
 			
 			
@@ -81,7 +81,7 @@ public class checkThread implements Runnable{
 	
 	private void write() {
 		try {
-			DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(serviceName);
+			DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(dnode+"/"+serviceName);
 			boolean res = datanode.replication(filename + chunknumber, nodes);
 			
 			if (res) {
@@ -103,7 +103,7 @@ public class checkThread implements Runnable{
 	
 	private void delete() {
 		try {
-			DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(serviceName);
+			DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(dnode+"/"+serviceName);
 			datanode.removeFile(filename + chunknumber);
 			
 			dfsScheduler.removeReplica(filename, chunknumber, dnode);
