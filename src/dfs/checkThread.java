@@ -77,6 +77,9 @@ public class checkThread implements Runnable{
 			if (e instanceof java.rmi.NotBoundException) {
 				System.out.println("Datanode "+dnode+" not startup.");
 			}
+			else if(e instanceof java.rmi.ConnectionExceprion){
+			    
+			}
 			else {
 				e.printStackTrace();
 			}
