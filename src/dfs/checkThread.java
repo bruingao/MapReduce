@@ -1,12 +1,15 @@
 package dfs;
 
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import Common.dfsScheduler;
 import Common.Util;
 
 public class checkThread implements Runnable{
 
 	private String dnode;
-	private int dnodeport;
+	//private int dnodeport;
+	private int registryPort;
 	private String serviceName;
 	
 	private OP op;
@@ -19,10 +22,11 @@ public class checkThread implements Runnable{
 
 	public enum OP  {WRITE, STATUS, DELETE};
 	
-	public checkThread(String dn, int dnp, String sname)
+	public checkThread(String dn, int rp, String sname)
 	{
 		dnode = dn;
-		dnodeport = dnp;
+		//dnodeport = dnp;
+		registryPort=rp;
 		serviceName = sname;
 	}
 	
@@ -62,7 +66,9 @@ public class checkThread implements Runnable{
 	private void checkStatus() {
 		boolean status = false;
 		try {
-			DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(dnode+"/"+serviceName);
+		    Registry dnRegistry=LocateRegistry.getRegistry(dnode,registryPort);
+			//DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(dnode+"/"+serviceName);
+			DataNodeI datanode = (DataNodeI) dnRegistry.lookup(serviceName);
 			status = datanode.heartBeat();
 			
 			
@@ -81,7 +87,9 @@ public class checkThread implements Runnable{
 	
 	private void write() {
 		try {
-			DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(dnode+"/"+serviceName);
+		    Registry dnRegistry=LocateRegistry.getRegistry(dnode,registryPort);
+			//DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(dnode+"/"+serviceName);
+			DataNodeI datanode = (DataNodeI) dnRegistry.lookup(serviceName);
 			boolean res = datanode.replication(filename + chunknumber, nodes);
 			
 			if (res) {
@@ -103,7 +111,8 @@ public class checkThread implements Runnable{
 	
 	private void delete() {
 		try {
-			DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(dnode+"/"+serviceName);
+		    Registry dnRegistry=LocateRegistry.getRegistry(dnode,registryPort);
+			DataNodeI datanode = (DataNodeI) dnRegistry.lookup(serviceName);
 			datanode.removeFile(filename + chunknumber);
 			
 			dfsScheduler.removeReplica(filename, chunknumber, dnode);

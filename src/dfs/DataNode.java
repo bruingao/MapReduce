@@ -138,7 +138,9 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		int index = rand.nextInt()%nodes.length;
 		
 		try {
-			DataNodeI datanode = (DataNodeI)registry.lookup(nodes[index]+"/"+dataNodeServiceName);
+		
+		    Registry dnRegistry=LocateRegistry.getRegistry(nodes[index],registryPort);
+			DataNodeI datanode = (DataNodeI)dnRegistry.lookup(dataNodeServiceName);
 			byte[] content = datanode.read(filename);
 			this.write(filename, content);
 			return true;
@@ -161,14 +163,15 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 			 unexportObject(datanode, false);
 			 DataNodeI stub = (DataNodeI) exportObject(datanode, dataNodePort);
 			 
-			 registry = LocateRegistry.getRegistry(registryHostname, registryPort);
-			 NameNodeI namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
+			 //registry = LocateRegistry.getRegistry(registryHostname, registryPort);
+			 registry = LocateRegistry.createRegistry(registryPort);
+			 //NameNodeI namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
 			 
 			 InetAddress address = InetAddress.getLocalHost();
 			 
 			 System.out.println(address.getHostAddress());
 			 
-			 namenode.proxyRebind(address.getHostAddress()+"/"+dataNodeServiceName, stub);
+			 registry.rebind(dataNodeServiceName, stub);
 			 
 			 //System.out.println(dataNodeServiceName);
 			 //registry.rebind(dataNodeServiceName, stub);

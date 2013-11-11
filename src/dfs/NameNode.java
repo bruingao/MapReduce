@@ -24,10 +24,10 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	private static final long serialVersionUID = 7921414827247184085L;
 
 	/* configuration file */
-	private static String confPath = "src/conf/dfs.conf";
+	private static String confPath = "conf/dfs.conf";
 	
 	/* datanode file */
-	private static String dnPath = "src/conf/slaves";
+	private static String dnPath = "conf/slaves";
 	
 	/* replication factor read from configuration file */
 	private static Integer replicaFactor;
@@ -82,7 +82,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	/* check data nodes */
 	public void checkDataNodes(){
 		for (String host : dfsScheduler.getStatus().keySet()) {
-			checkThread ct = new checkThread(host, dataNodePort, dataNodeServiceName);
+			checkThread ct = new checkThread(host, registryPort, dataNodeServiceName);
 			ct.setOp(checkThread.OP.STATUS);
 			executor.execute(ct);
 		}
@@ -106,7 +106,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 					String res[] = dfsScheduler.chooseHeavy(cnt-replicaFactor, (String[])candidates.toArray());
 					
 					for (String r : res) {
-						checkThread t = new checkThread(r, dataNodePort, dataNodeServiceName);
+						checkThread t = new checkThread(r, registryPort, dataNodeServiceName);
 						t.setFilename(name);
 						t.setChunknumber(i);
 						t.setOp(checkThread.OP.DELETE);
@@ -120,7 +120,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 						if(r == null)
 							break;
 						
-						checkThread t = new checkThread(r, dataNodePort, dataNodeServiceName);
+						checkThread t = new checkThread(r, registryPort, dataNodeServiceName);
 						t.setFilename(name);
 						t.setChunknumber(i);
 						t.setOp(checkThread.OP.WRITE);
@@ -210,7 +210,8 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 			 NameNodeI stub = (NameNodeI) exportObject(server, nameNodePort);
 			 
 			 registry = LocateRegistry.createRegistry(registryPort);
-			 registry.rebind(registryHostname + "/" + nameNodeServiceName, stub);
+			 //registry.rebind(registryHostname + "/" + nameNodeServiceName, stub);
+			 registry.rebind(nameNodeServiceName, stub);
 			 
 			 System.out.println ("NameNode ready!");
 			 
@@ -240,7 +241,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 		Util.writeObject(nameNodePath+"files", dfsScheduler.getFiles());
 		Util.writeObject(nameNodePath + "nodeToReplicas", dfsScheduler.getNodeToReplicas());
 	}
-
+    /*
     @Override	
 	public void proxyRebind(String dataNodeServiceName, DataNodeI datanode) throws RemoteException {
 	    try
@@ -252,5 +253,6 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	    	e.printStackTrace();
 	    }
 	}
+	*/
 		
 }

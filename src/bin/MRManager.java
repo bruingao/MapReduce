@@ -38,7 +38,8 @@ public class MRManager {
 		NameNodeI namenode = null;
 		
 		registry = LocateRegistry.getRegistry(registryHostname, registryPort);
-		namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
+		//namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
+		namenode = (NameNodeI)registry.lookup(nameNodeServiceName);
 		
 		String cmd = cmds[1];
 		
@@ -113,7 +114,8 @@ public class MRManager {
 				
 				for(int chunk : res.keySet()) {
 					for (String dnode : res.get(chunk)){
-						DataNodeI datanodeI = (DataNodeI)registry.lookup(dnode+"/"+dataNodeServiceName);
+					    Registry dnRegistry=LocateRegistry.getRegistry(dnode,registryPort);
+						DataNodeI datanodeI = (DataNodeI)dnRegistry.lookup(dataNodeServiceName);
 						datanodeI.write(filename+chunk, Arrays.copyOfRange(content, chunk * csize, (chunk+1)*csize));
 					}
 				}
@@ -140,7 +142,8 @@ public class MRManager {
 				
 				for(int chunk : file.keySet()) {
 					for (String dnode : file.get(chunk)){
-						DataNodeI datanodeI = (DataNodeI)registry.lookup(dnode+"/"+dataNodeServiceName);
+					    Registry dnRegistry=LocateRegistry.getRegistry(dnode,registryPort);
+						DataNodeI datanodeI = (DataNodeI)dnRegistry.lookup(dataNodeServiceName);
 						datanodeI.removeFile(fname + chunk);
 					}
 				}
