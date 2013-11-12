@@ -1,5 +1,7 @@
 package mapred;
 
+import format.Collector;
+
 public interface Mapper {
-	void map(String key, String value);
+	public void map(String key, String value, Collector collector);
 }

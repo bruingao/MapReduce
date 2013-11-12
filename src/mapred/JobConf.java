@@ -15,6 +15,9 @@ public class JobConf implements Serializable{
 	private String inputfile;
 	private String outputfile;
 	
+	private Class<?> inputFormat;
+	private Class<?> outputFormat;
+	
 	public Class<?> getMapperClass() {
 		return mapperClass;
 	}
@@ -38,5 +41,17 @@ public class JobConf implements Serializable{
 	}
 	public void setOutputfile(String outputfile) {
 		this.outputfile = outputfile;
+	}
+	public Class<?> getInputFormat() {
+		return inputFormat;
+	}
+	public void setInputFormat(Class<?> inputFormat) {
+		this.inputFormat = inputFormat;
+	}
+	public Class<?> getOutputFormat() {
+		return outputFormat;
+	}
+	public void setOutputFormat(Class<?> outputFormat) {
+		this.outputFormat = outputFormat;
 	}
 }

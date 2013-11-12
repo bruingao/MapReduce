@@ -9,6 +9,8 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import Common.Pair;
 import Common.Util;
@@ -62,6 +64,9 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	/* job tracker service name */
 	private static String jobServiceName;
 	
+	/* thread executor */
+	private static ExecutorService executor = Executors.newCachedThreadPool();
+	
 	/* jobid to filename and corresponding chunks */
 //	private static ConcurrentHashMap<Integer, HashMap<String, HashSet<String>>> jobToInput
 //		= new ConcurrentHashMap<Integer, HashMap<String, HashSet<String>>>();
@@ -93,12 +98,12 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 
 	
 	
-	private void increase_ts(Integer t, int n) {
+	public static void increase_ts(Integer t, int n) {
 		synchronized(t) {
 			t += n;
 		}
 	}
-	private void decrease_ts(Integer t, int n) {
+	public static void decrease_ts(Integer t, int n) {
 		synchronized(t) {
 			t -= n;
 		}
@@ -109,7 +114,7 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	}
 
 	@Override
-	public void pushMapTask(int jid, String filename, 
+	public void pushMapTask(int jid, JobConf conf, 
 			HashMap<Integer, String> chunks) throws RemoteException {
 		/* store the files information in jobs and replicas */
 				
@@ -126,17 +131,23 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 		/* distributed chunks */
 		int cnt = 0;
 		int num = 0;
-		HashSet<HashSet<Integer>> pcks = new HashSet<HashSet<Integer>>();
+		HashMap<Integer, HashSet<Integer>> pcks = new HashMap<Integer, HashSet<Integer>>();
+		HashMap<Integer, HashSet<String>> dnodes = new HashMap<Integer, HashSet<String>>();
 		HashSet<Integer> cks = null;
+		HashSet<String> nodes = null;
 		for (int c : chunks.keySet()) {
 			if(cnt == minChunk) {
-				pcks.add(cks);
+				pcks.put(cnt, cks);
+				dnodes.put(cnt, nodes);
 				cnt = 0;
 				num++;
 			}
-			if (cnt == 0)
+			if (cnt == 0) {
 				cks = new HashSet<Integer>();
+				nodes = new HashSet<String>();
+			}
 			cks.add(c);
+			nodes.add(chunks.get(c));
 			cnt++;
 		}
 		num++;
@@ -154,16 +165,21 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 			
 			Util.writeBinaryToFile(mapper.content, mapper.name + ".class");
 			
-			ProcessBuilder process = new ProcessBuilder();
-			
+			/* new mapper instance and do job */
+			for (int n = 0; n < num; n++) {
+				taskThread tt = new taskThread(jid, num, conf,
+						pcks.get(n), dnodes.get(n), registryPort,
+						dataNodeServiceName, mapper.name);
+				
+				executor.execute(tt);
+				
+			}
 		} catch (NotBoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		
-		/* new mapper instance and do job */
-		
+				
 		/* store the intermediate result (mapper does this) */
 		
 		/* notify the job tracker if num of mapper reach zero */

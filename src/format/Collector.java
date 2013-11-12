@@ -1,6 +1,6 @@
-import java.io.*;
+package format;
+
 import java.util.*;
-import java.lang.Math;
 
 public class Collector {
 
@@ -13,9 +13,7 @@ public class Collector {
     }
     
     public void addkvPairs(List<inputFormatAbs.kvPair> kvPairs){
-        for (int i=0;i<kvPairs.size();i++){
-            collection.add(kvPairs.get(i));
-        }
+    	collection.addAll(kvPairs);
     }
     
     public void addkvPair(inputFormatAbs.kvPair kvPair){

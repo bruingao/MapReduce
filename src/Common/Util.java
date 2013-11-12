@@ -1,13 +1,19 @@
 package Common;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Reader;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
+import java.io.Writer;
 import java.lang.reflect.Field;
 /**
  * Util is a utility class for our program. It compute the hash code of a givin method.
@@ -239,5 +245,28 @@ public final class Util {
 		
 		return content;
 	}
+	
+	public static String convertStreamToStr(InputStream is) throws IOException {
+		 
+		if (is != null) {
+			Writer writer = new StringWriter();
+			 
+			char[] buffer = new char[1024];
+			try {
+			Reader reader = new BufferedReader(new InputStreamReader(is,
+					"UTF-8"));
+				int n;
+				while ((n = reader.read(buffer)) != -1) {
+					writer.write(buffer, 0, n);
+				}
+			} finally {
+				is.close();
+			}
+			return writer.toString();
+		} else {
+			return "";
+		}
+	}
+		 
 		
 }

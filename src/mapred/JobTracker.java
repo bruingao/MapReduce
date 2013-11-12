@@ -176,7 +176,7 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 			Registry reg = LocateRegistry.getRegistry(node, taskPort);
 			try {
 				TaskTrackerI tasktracker = (TaskTrackerI) reg.lookup(taskServiceName);
-				tasktracker.pushMapTask(jid, conf.getInputfile(), mapperToChunks.get(node));
+				tasktracker.pushMapTask(jid, conf, mapperToChunks.get(node));
 			} catch (NotBoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
