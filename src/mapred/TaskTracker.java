@@ -35,7 +35,7 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	public static Integer maxReducers;
 	
 	/* job tracker's host address */
-	private static String jobHostname;
+	public static String jobHostname;
 	
 	/* job tracker's port number */
 	private static Integer jobPort;
@@ -50,7 +50,7 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	private static String dataNodeServiceName;
 	
 	/* registry port number */
-	private static Integer registryPort;
+	public static Integer registryPort;
 	
 	/* file path (store map and reduce class */
 	private static String sysFilePath;
@@ -62,7 +62,13 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	private static Integer minChunk;
 	
 	/* job tracker service name */
-	private static String jobServiceName;
+	public static String jobServiceName;
+	
+	/* number of paritions */
+	public static Integer numOfPartitions;
+	
+	/* host ip address */
+	public static String hostAddress;
 	
 	/* thread executor */
 	private static ExecutorService executor = Executors.newCachedThreadPool();
@@ -76,10 +82,10 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 //		= new ConcurrentHashMap<String, HashSet<String>>();
 	
 	/* jobid to intermediate file */
-	private static ConcurrentHashMap<Integer, HashSet<String>> jobToInter
-		= new ConcurrentHashMap<Integer, HashSet<String>>();
+	public static ConcurrentHashMap<Integer, HashSet<String[]>> jobToInter
+		= new ConcurrentHashMap<Integer, HashSet<String[]>>();
 	
-	private static ConcurrentHashMap<Integer, Integer> jobToIncompleteMapper
+	public static ConcurrentHashMap<Integer, Integer> jobToIncompleteMapper
 		= new ConcurrentHashMap<Integer, Integer>();
 	
 //	/* jobid to mapper */
@@ -91,10 +97,10 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 //		= new ConcurrentHashMap<Integer, String>();
 	
 	/* number of mappers running on this task tracker */
-	private static Integer numMappers = 0;
+	public static Integer numMappers = 0;
 	
 	/* number of reducers running on this task tracker */
-	private static Integer numReducers = 0;
+	public static Integer numReducers = 0;
 
 	
 	
@@ -152,7 +158,14 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 		}
 		num++;
 		
-		jobToIncompleteMapper.put(jid, num);
+		Integer n = jobToIncompleteMapper.get(jid);
+		
+		if (n == null)
+			n = num;
+		
+		n += num;
+		
+		jobToIncompleteMapper.put(jid, n);
 		
 		increase_ts(numMappers, num);
 		
@@ -163,13 +176,13 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 			
 			Pair mapper = jobtracker.readMapper(jid);
 			
-			Util.writeBinaryToFile(mapper.content, mapper.name + ".class");
+			Util.writeBinaryToFile((byte[])mapper.content, (String)mapper.name + ".class");
 			
 			/* new mapper instance and do job */
-			for (int n = 0; n < num; n++) {
+			for (int nn = 0; nn < num; nn++) {
 				taskThread tt = new taskThread(jid, num, conf,
-						pcks.get(n), dnodes.get(n), registryPort,
-						dataNodeServiceName, mapper.name);
+						pcks.get(nn), dnodes.get(nn), registryPort,
+						dataNodeServiceName, (String)mapper.name, interFilePath, numOfPartitions);
 				
 				executor.execute(tt);
 				

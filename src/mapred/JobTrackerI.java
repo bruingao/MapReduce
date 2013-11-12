@@ -17,4 +17,6 @@ public interface JobTrackerI extends Remote{
 	public Pair readMapper(Integer jid) throws RemoteException;
 	public Pair readReducer(Integer jid) throws RemoteException;
 	
+	public void notifyMapResult(boolean res, int jid, String tnode) throws RemoteException;
+	
 }

@@ -10,8 +10,11 @@ import java.rmi.registry.Registry;
 import java.util.HashSet;
 import java.util.List;
 
+import Common.Util;
+
 import dfs.DataNodeI;
 import format.Collector;
+import format.Partitioner;
 import format.inputFormatAbs;
 import format.inputFormatAbs.kvPair;
 
@@ -19,26 +22,38 @@ public class MapRunner {
 	
 	private static Mapper mapper;
 	
+	
+
+	public static Mapper getMapper() {
+		return mapper;
+	}
+
+	public static void setMapper(Mapper mapper) {
+		MapRunner.mapper = mapper;
+	}
+	
 	public static void main(String[] args) {
-		/* mapper classname, jobid, num of partitions, numOfChunks, inputfile, chunks, datanodeHost, regPort, datanode service name */
+		/* mapper classname, jobid, num of partitions, partitionPath, numOfChunks, inputfile, chunks, datanodeHost, regPort, datanode service name */
 		
 		String mapperName = args[0];
 		
 		int jid = Integer.parseInt(args[1]);
 		
 		int numPartitions = Integer.parseInt(args[2]);
+		
+		String partitionPath = args[3];
 				
-		Integer numOfChunks = Integer.parseInt(args[3]);
+		int numOfChunks = Integer.parseInt(args[4]);
 		
-		String filename = args[4];
+		String filename = args[5];
 		
-		String inputformat = args[5];
+		String inputformat = args[6];
 		
 		HashSet<Integer> chunks = new HashSet<Integer>();
 		
 		int i = 0;
 		while (i < numOfChunks) {
-			chunks.add(Integer.parseInt(args[6 + i]));
+			chunks.add(Integer.parseInt(args[7 + i]));
 			i++;
 		}
 		
@@ -57,11 +72,11 @@ public class MapRunner {
 			Collector collector = new Collector();
 			
 			for (int ck : chunks) {
-				String datanodeHost = args[6 + numOfChunks];
+				String datanodeHost = args[7 + numOfChunks];
 				
-				int regPort = Integer.parseInt(args[7 + numOfChunks]);
+				int regPort = Integer.parseInt(args[8 + numOfChunks]);
 				
-				String service = args[8 + numOfChunks];
+				String service = args[9 + numOfChunks];
 				
 				
 					Registry reg = LocateRegistry.getRegistry(datanodeHost, regPort);
@@ -81,10 +96,21 @@ public class MapRunner {
 					}
 			}
 			
-			/* collector.sortStringKey(); */
+			collector.sortStringKey();
+			
+			Partitioner partitioner = new Partitioner(collector.collection, collector.uniqueKeys, numPartitions);
+			String pContents[] = partitioner.partition();
 			
 			/* partition */
-			
+			String partitions[] = new String[numPartitions];
+			String suffix = "-" + chunks.toArray()[0].toString();
+			for(i = 0; i < numPartitions; i++) {
+				partitions[i] = jid+"partition"+i+suffix;
+				
+				Util.writeBinaryToFile(pContents[i].getBytes("UTF-8"), partitionPath+partitions[i]);
+				
+				System.out.println(partitions[i]);
+			}
 			
 		} catch (RemoteException e) {
 			e.printStackTrace();
@@ -119,13 +145,5 @@ public class MapRunner {
 
 		
 		
-	}
-
-	public static Mapper getMapper() {
-		return mapper;
-	}
-
-	public static void setMapper(Mapper mapper) {
-		MapRunner.mapper = mapper;
 	}
 }

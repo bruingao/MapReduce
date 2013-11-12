@@ -81,13 +81,13 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 	/* dfs Registry */
 	private static Registry dfsRegistry;
 	
-	/* the job's input file name */
-	private static ConcurrentHashMap<Integer, String> jobToInput
-		= new ConcurrentHashMap<Integer, String>();
-	
-	/* the job's output file path */
-	private static ConcurrentHashMap<Integer, String> jobToOutput
-		= new ConcurrentHashMap<Integer, String>();
+//	/* the job's input file name */
+//	private static ConcurrentHashMap<Integer, String> jobToInput
+//		= new ConcurrentHashMap<Integer, String>();
+//	
+//	/* the job's output file path */
+//	private static ConcurrentHashMap<Integer, String> jobToOutput
+//		= new ConcurrentHashMap<Integer, String>();
 	
 	/* the job's mapper class path */
 	private static ConcurrentHashMap<Integer, String> mappers
@@ -101,14 +101,19 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 	private static ConcurrentHashMap<Integer, String> mappername
 	= new ConcurrentHashMap<Integer, String>();
 	
-	/* the job's reducer class path */
+	/* the job's reducer class name */
 	private static ConcurrentHashMap<Integer, String> reducername
 		= new ConcurrentHashMap<Integer, String>();
+	
+	/* job to its conf */
+	private static ConcurrentHashMap<Integer, JobConf> confs
+		= new ConcurrentHashMap<Integer, JobConf>();
 	
 	/* the job's current status fail or normal */
 	private static ConcurrentHashMap<Integer, Boolean> jobStatus
 		= new ConcurrentHashMap<Integer, Boolean>();
 	
+		
 	private void increaseId() {
 		synchronized(gjobid) {
 			gjobid++;
@@ -149,8 +154,8 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 		String mapperPath = sysFilePath + "mapper"+ gjobid;
 		String reducerPath = sysFilePath + "reducer"+ gjobid;
 		
-		Util.writeBinaryToFile(mapper.content, mapperPath);
-		Util.writeBinaryToFile(reducer.content, reducerPath);
+		Util.writeBinaryToFile((byte[])mapper.content, mapperPath);
+		Util.writeBinaryToFile((byte[])reducer.content, reducerPath);
 		
 //		Util.writeObject(mapperPath, conf.getMapperClass());
 //		Util.writeObject(reducerPath, conf.getReducerClass());
@@ -160,8 +165,8 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 		mappers.put(jid, mapperPath);
 		reducers.put(jid, reducerPath);
 		
-		mappername.put(jid, mapper.name);
-		reducername.put(jid, reducer.name);
+		mappername.put(jid, (String)mapper.name);
+		reducername.put(jid, (String)reducer.name);
 		
 		
 		/* call open method of dfs namenode and get the corresponding metadata */
@@ -182,6 +187,8 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 				e.printStackTrace();
 			}
 		}
+		
+		jobStatus.put(jid, true);
 		
 		return jid.toString();
 	}
@@ -226,6 +233,35 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 		Pair pair = new Pair(reducername.get(jid), Util.readFromFile(reducers.get(jid)));
 
 		return pair;
+	}
+
+	@Override
+	public void notifyMapResult(boolean res, int jid, String tnode) throws RemoteException {
+		if (res) {
+			jobScheduler.mapperSucceed(jid, tnode);
+			
+			if (checkMapper(jid) <= 0.0) {
+				mappers.remove(jid);
+				mappername.remove(jid);
+				/* start reducers */
+				
+			}
+		} else {
+			/* if the job fails */
+			Pair newNode = jobScheduler.mapperFail(jid, tnode);
+			String opNode = (String) newNode.name;
+			HashMap<Integer, String> failChunk = (HashMap<Integer, String>) newNode.content;
+			
+			Registry reg = LocateRegistry.getRegistry(opNode, taskPort);
+			try {
+				TaskTrackerI tasktracker = (TaskTrackerI) reg.lookup(taskServiceName);
+				tasktracker.pushMapTask(jid, confs.get(jid), failChunk);
+			} catch (NotBoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
 	}
 
 }
