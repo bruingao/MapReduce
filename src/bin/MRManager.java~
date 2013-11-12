@@ -142,8 +142,7 @@ public class MRManager {
 				
 				for(int chunk : file.keySet()) {
 					for (String dnode : file.get(chunk)){
-						Registry dnRegistry=LocateRegistry.getRegistry(dnode,registryPort);
-						DataNodeI datanodeI = (DataNodeI)dnRegistry.lookup(dataNodeServiceName);
+						DataNodeI datanodeI = (DataNodeI)registry.lookup(dnode+"/"+dataNodeServiceName);
 						datanodeI.removeFile(fname + chunk);
 					}
 				}
