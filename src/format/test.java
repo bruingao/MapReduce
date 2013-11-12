@@ -32,8 +32,15 @@ public class test {
             System.out.println(c.collection.get(i).value);
         }
         */
-        outputFormat oformat=new outputFormat(c.collection);
-        System.out.println(oformat.getOutput());
+        
+        Partitioner p=new Partitioner(c.collection,c.uniqueKeys,3);
+        
+        String[] result=p.partition();
+        
+        //outputFormat oformat=new outputFormat(c.collection);
+        System.out.println(result[0]);
+        System.out.println(result[1]);
+        System.out.println(result[2]);
         
     }
 

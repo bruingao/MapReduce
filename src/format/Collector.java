@@ -7,6 +7,8 @@ public class Collector {
     
     List<inputFormatAbs.kvPair> collection=new ArrayList<inputFormatAbs.kvPair>();
     
+    HashSet<String> uniqueKeys= new HashSet<String>();
+    
     public Collector()
     {
         
@@ -15,11 +17,13 @@ public class Collector {
     public void addkvPairs(List<inputFormatAbs.kvPair> kvPairs){
         for (int i=0;i<kvPairs.size();i++){
             collection.add(kvPairs.get(i));
+            uniqueKeys.add(kvPairs.get(i).key);
         }
     }
     
     public void addkvPair(inputFormatAbs.kvPair kvPair){
         collection.add(kvPair);
+        uniqueKeys.add(kvPair.key);
     }
     
     public void sortStringKey(){
