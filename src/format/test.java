@@ -33,9 +33,9 @@ public class test {
         }
         */
         
-        Partitioner p=new Partitioner(c.collection,c.uniqueKeys,3);
         
-        String[] result=p.partition();
+        
+        String[] result=Partitioner.partition(c.collection,c.uniqueKeys,3);
         
         //outputFormat oformat=new outputFormat(c.collection);
         System.out.println(result[0]);

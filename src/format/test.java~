@@ -25,11 +25,22 @@ public class test {
 
         c.addkvPairs(ps1);
         c.addkvPairs(ps2);
-        c.sortStringKey();
+        c.sortIntKey();
+        /*
         for (int i=0;i<12;i++){
             System.out.println(c.collection.get(i).key);
             System.out.println(c.collection.get(i).value);
         }
+        */
+        
+        Partitioner p=new Partitioner(c.collection,c.uniqueKeys,3);
+        
+        String[] result=p.partition();
+        
+        //outputFormat oformat=new outputFormat(c.collection);
+        System.out.println(result[0]);
+        System.out.println(result[1]);
+        System.out.println(result[2]);
         
     }
 
