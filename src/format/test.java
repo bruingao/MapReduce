@@ -26,10 +26,14 @@ public class test {
         c.addkvPairs(ps1);
         c.addkvPairs(ps2);
         c.sortIntKey();
+        /*
         for (int i=0;i<12;i++){
             System.out.println(c.collection.get(i).key);
             System.out.println(c.collection.get(i).value);
         }
+        */
+        outputFormat oformat=new outputFormat(c.collection);
+        System.out.println(oformat.getOutput());
         
     }
 
