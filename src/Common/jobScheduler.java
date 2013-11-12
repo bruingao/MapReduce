@@ -42,8 +42,8 @@ public final class jobScheduler {
 		= new ConcurrentHashMap<Integer, Integer>();
 	
 	/* job To mapper taskTrackers(Machine's address) and corresponding chunks */
-	public static ConcurrentHashMap<Integer, HashMap<String, HashSet<Integer>>> jobToMappers
-		= new ConcurrentHashMap<Integer, HashMap<String, HashSet<Integer>>>();
+	public static ConcurrentHashMap<Integer, HashMap<String, HashMap<Integer, String>>> jobToMappers
+		= new ConcurrentHashMap<Integer, HashMap<String, HashMap<Integer, String>>>();
 	
 	/* number of reducers */
 	private static ConcurrentHashMap<Integer, Integer> numReducers
@@ -71,33 +71,47 @@ public final class jobScheduler {
 		return (uncompletedReducers.get(jid) == 0) && (uncompletedMappers.get(jid) == 0);
 	}
 	
-	public static HashMap<String,HashSet<Integer>> decideMappers(HashMap<Integer, HashSet<String>> filechunks, int jid) {
+	public static HashMap<String,HashMap<Integer, String>> decideMappers(HashMap<Integer, HashSet<String>> filechunks, int jid) {
 		/* check every filechunk's replication nodes and choose the one with fewest mappers running.
 		 */
 		
-		HashMap<String,HashSet<Integer>> nodeTochunks = new HashMap<String, HashSet<Integer>>();
+		HashMap<String,HashMap<Integer, String>> nodeTochunks = new HashMap<String, HashMap<Integer, String>>();
 		
 		for (int chunk : filechunks.keySet()) {
 			HashSet<String> nodes = filechunks.get(chunk);
 			/* choose among those nodes which have the file chunk */
 			String opNode = chooseBestNode(nodes);
+			
+			double point1 = JobTracker.localBonus 
+					+ JobTracker.taskBonus * (JobTracker.maxMappers - nodeToNumMappers.get(opNode));
+			
 			if (opNode == null) {
 				System.out.println("This cannot happen because this project assumes " +
 						"that it is impossible for all the replicas having failed!");
 				return null;
 			}
-			HashSet<Integer> chunks = nodeTochunks.get(opNode);
-			if(chunks == null)
-				chunks = new HashSet<Integer>();
 			
-			chunks.add(chunk);
+			/* choose another one which has the least number of mappers */
+			String opNode2 = chooseBestNode(nodeStatus.keySet());
+			
+			double point2 = JobTracker.taskBonus * (JobTracker.maxMappers - nodeToNumMappers.get(opNode2));
+			
+			/* compare their points and obtain the best one */
+			opNode = point1 <= point2? opNode:opNode2;
+			
+			HashMap<Integer, String> chunks = nodeTochunks.get(opNode);
+			if(chunks == null)
+				chunks = new HashMap<Integer, String>();
+			
+			chunks.put(chunk, opNode);
 			nodeTochunks.put(opNode, chunks);
 			
 		}
 		
 		/* add mappers number to that every chosen node */
 		for(String node : nodeTochunks.keySet()) {
-			nodeToNumMappers.put(node, nodeToNumMappers.get(node)+1);
+			int mc = JobTracker.minChunk;
+			nodeToNumMappers.put(node, nodeToNumMappers.get(node)+ (nodeTochunks.get(node).size()+mc-1)/mc);
 		}
 		
 		/* add corresponding information */

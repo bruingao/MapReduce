@@ -14,5 +14,6 @@ public interface NameNodeI extends Remote{
 	public ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>> listFiles() throws RemoteException;
 	public ConcurrentHashMap<String, HashSet<String>> listNodes() throws RemoteException;
 	public void removeFile(String filename) throws RemoteException;
+	public boolean checkname (String filename) throws RemoteException;
 	//public void proxyRebind(String dataNodeServiceName, DataNodeI datanode) throws RemoteException;
 }

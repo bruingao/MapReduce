@@ -2,12 +2,19 @@ package mapred;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.util.Map.Entry;
+
+import Common.Pair;
 
 import mapred.JobTracker.JOB_RESULT;
 
 public interface JobTrackerI extends Remote{
-	public String submitJob(JobConf conf) throws RemoteException;
+	public String submitJob(JobConf conf, Pair mapper, Pair reducer) throws RemoteException;
 	public JOB_RESULT checkStatus(Integer jobid) throws RemoteException;
 	public double checkMapper(Integer jobid) throws RemoteException;
 	public double checkReducer(Integer jobid) throws RemoteException;
+	
+	public Pair readMapper(Integer jid) throws RemoteException;
+	public Pair readReducer(Integer jid) throws RemoteException;
+	
 }

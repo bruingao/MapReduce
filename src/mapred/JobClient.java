@@ -7,6 +7,7 @@ import java.rmi.registry.Registry;
 
 import mapred.JobTracker.JOB_RESULT;
 
+import Common.Pair;
 import Common.Util;
 
 public class JobClient {
@@ -62,7 +63,11 @@ public class JobClient {
 			e.printStackTrace();
 		}
 		
-		String res = jobtracker.submitJob(conf);
+		Pair mapper = new Pair(conf.getMapperClass().getName(), 
+				Util.readFromFile(conf.getMapperClass().getName()+".class"));
+		Pair reducer = new Pair(conf.getReducerClass().getName(),
+				Util.readFromFile(conf.getReducerClass().getName()+ ".class"));
+		String res = jobtracker.submitJob(conf, mapper, reducer);
 		
 		/* return the job id or some errors may occur */
 		if (res == "OUTEXISTS") {

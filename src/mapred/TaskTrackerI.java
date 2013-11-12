@@ -6,8 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 public interface TaskTrackerI extends Remote{
-	public void pushMapTask(int jobid, HashMap<Integer, HashSet<String>> replicas,
-			String filename, HashSet<Integer> chunks) throws RemoteException;
+	public void pushMapTask(int jobid, String filename, HashMap<Integer, String> chunks) throws RemoteException;
 	public void pushReduceTask(int jobid, HashMap<String, String> files) throws RemoteException;
 
 }

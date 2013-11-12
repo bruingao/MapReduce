@@ -1,5 +1,5 @@
 package mapred;
 
 public interface Mapper {
-	void map();
+	void map(String key, String value);
 }

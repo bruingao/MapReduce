@@ -254,5 +254,11 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	    }
 	}
 	*/
+
+	@Override
+	public boolean checkname(String filename) throws RemoteException {
+		// TODO Auto-generated method stub
+		return dfsScheduler.checkname(filename);
+	}
 		
 }

@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
 
+import Common.Pair;
 import Common.Util;
 
 import dfs.DataNodeI;
@@ -55,18 +56,15 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	/* intermediate file path (store intermediate result of mappers) */
 	private static String interFilePath;
 	
-	/* job tracker's registry */
-	private static Registry registry;
-	
-	/* data dfs node path */
-	private static String dataNodePath;
-	
 	/* minimun chunks */
 	private static Integer minChunk;
 	
+	/* job tracker service name */
+	private static String jobServiceName;
+	
 	/* jobid to filename and corresponding chunks */
-	private static ConcurrentHashMap<Integer, HashMap<String, HashSet<String>>> jobToInput
-		= new ConcurrentHashMap<Integer, HashMap<String, HashSet<String>>>();
+//	private static ConcurrentHashMap<Integer, HashMap<String, HashSet<String>>> jobToInput
+//		= new ConcurrentHashMap<Integer, HashMap<String, HashSet<String>>>();
 	
 //	/* file chunk to replicas */
 //	private static ConcurrentHashMap<String, HashSet<String>> replicas
@@ -87,18 +85,22 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 //	private static ConcurrentHashMap<Integer, String> jobToReducer
 //		= new ConcurrentHashMap<Integer, String>();
 	
+	/* number of mappers running on this task tracker */
 	private static Integer numMappers = 0;
+	
+	/* number of reducers running on this task tracker */
 	private static Integer numReducers = 0;
+
 	
 	
-	private void increase_ts(Integer t) {
+	private void increase_ts(Integer t, int n) {
 		synchronized(t) {
-			t++;
+			t += n;
 		}
 	}
-	private void decrease_ts(Integer t) {
+	private void decrease_ts(Integer t, int n) {
 		synchronized(t) {
-			t--;
+			t -= n;
 		}
 	}
 	
@@ -107,56 +109,26 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	}
 
 	@Override
-	public void pushMapTask(int jid, HashMap<Integer, HashSet<String>> filereplicas,
-			String filename, HashSet<Integer> chunks) throws RemoteException {
+	public void pushMapTask(int jid, String filename, 
+			HashMap<Integer, String> chunks) throws RemoteException {
 		/* store the files information in jobs and replicas */
-		
-		//String content = "";
-		
-		
-//		/* I think should let mapper do this */
-//		
-//		/* read files */
-//		if(filereplicas != null) {
-//			for (int i : chunks) {
-//				for (String dnode : filereplicas.get(i)) {
-//					Registry reg = LocateRegistry.getRegistry(dnode, dataNodePort);
-//					try {
-//						DataNodeI datanode = (DataNodeI)reg.lookup(dataNodeServiceName);
-//						content.concat(new String(datanode.read(filename + i),"UTF-8"));
-//					} catch (NotBoundException e) {
-//						e.printStackTrace();
-//					} catch (UnsupportedEncodingException e) {
-//						e.printStackTrace();
-//					}
-//				}
+				
+//		/* queue */
+//		if (numMappers >= maxMappers) {
+//			HashMap<String, HashSet<String>> fileToReplicas = new HashMap<String, HashSet<String>>();
+//			for(int i : chunks) {
+//				fileToReplicas.put(filename+i, filereplicas.get(i));
 //			}
-//		} else {
-//			for (int i : chunks) {
-//				try {
-//					content.concat(new String(Util.readFromFile(dataNodePath+filename+i), "UTF-8"));
-//				} catch (UnsupportedEncodingException e) {
-//					e.printStackTrace();
-//				}
-//			}
+//			jobToInput.put(jid, fileToReplicas);
+//			return;
 //		}
-		
-		/* queue */
-		if (numMappers >= maxMappers) {
-			HashMap<String, HashSet<String>> fileToReplicas = new HashMap<String, HashSet<String>>();
-			for(int i : chunks) {
-				fileToReplicas.put(filename+i, filereplicas.get(i));
-			}
-			jobToInput.put(jid, fileToReplicas);
-			return;
-		}
 		
 		/* distributed chunks */
 		int cnt = 0;
 		int num = 0;
 		HashSet<HashSet<Integer>> pcks = new HashSet<HashSet<Integer>>();
 		HashSet<Integer> cks = null;
-		for (int c : chunks) {
+		for (int c : chunks.keySet()) {
 			if(cnt == minChunk) {
 				pcks.add(cks);
 				cnt = 0;
@@ -171,7 +143,24 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 		
 		jobToIncompleteMapper.put(jid, num);
 		
+		increase_ts(numMappers, num);
+		
 		/* read mapper class */
+		Registry reg = LocateRegistry.getRegistry(jobHostname, registryPort);
+		try {
+			JobTrackerI jobtracker = (JobTrackerI)reg.lookup(jobServiceName);
+			
+			Pair mapper = jobtracker.readMapper(jid);
+			
+			Util.writeBinaryToFile(mapper.content, mapper.name + ".class");
+			
+			ProcessBuilder process = new ProcessBuilder();
+			
+		} catch (NotBoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		
 		/* new mapper instance and do job */
 		

@@ -7,10 +7,12 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import dfs.NameNodeI;
 
+import Common.Pair;
 import Common.Util;
 import Common.jobScheduler;
 
@@ -61,6 +63,15 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 	/* intermediate file path (store intermediate result of mappers) */
 	private static String interFilePath;
 	
+	/* local bonus */
+	public static Double localBonus;
+	
+	/* task bonus */
+	public static Double taskBonus;
+	
+	/* minimum chunks per mapper */
+	public static Integer minChunk;
+	
 	/* global job id increasing */
 	private static volatile Integer gjobid;
 	
@@ -78,12 +89,20 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 	private static ConcurrentHashMap<Integer, String> jobToOutput
 		= new ConcurrentHashMap<Integer, String>();
 	
-	/* the job's mapper class name */
+	/* the job's mapper class path */
 	private static ConcurrentHashMap<Integer, String> mappers
 		= new ConcurrentHashMap<Integer, String>();
 	
-	/* the job's reducer class name */
+	/* the job's reducer class path */
 	private static ConcurrentHashMap<Integer, String> reducers
+		= new ConcurrentHashMap<Integer, String>();
+	
+	/* the job's mapper class name */
+	private static ConcurrentHashMap<Integer, String> mappername
+	= new ConcurrentHashMap<Integer, String>();
+	
+	/* the job's reducer class path */
+	private static ConcurrentHashMap<Integer, String> reducername
 		= new ConcurrentHashMap<Integer, String>();
 	
 	/* the job's current status fail or normal */
@@ -104,7 +123,7 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 	public enum JOB_RESULT {FAIL, SUCCESS, INPROGRESS};
 	
 	@Override
-	public String submitJob(JobConf conf) throws RemoteException {
+	public String submitJob(JobConf conf, Pair mapper, Pair reducer) throws RemoteException {
 		/* check output file name, if exists return OUTPUTEXISTS */
 		/* if input file not found return INPUTNOTFOUND */
 		
@@ -130,13 +149,19 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 		String mapperPath = sysFilePath + "mapper"+ gjobid;
 		String reducerPath = sysFilePath + "reducer"+ gjobid;
 		
-		Util.writeObject(mapperPath, conf.getMapperClass());
-		Util.writeObject(reducerPath, conf.getReducerClass());
+		Util.writeBinaryToFile(mapper.content, mapperPath);
+		Util.writeBinaryToFile(reducer.content, reducerPath);
+		
+//		Util.writeObject(mapperPath, conf.getMapperClass());
+//		Util.writeObject(reducerPath, conf.getReducerClass());
 		
 		
-		/* store the path of the calss file and the input and output file path */
+		/* store the path of the calss file and the input and output file path */		
 		mappers.put(jid, mapperPath);
 		reducers.put(jid, reducerPath);
+		
+		mappername.put(jid, mapper.name);
+		reducername.put(jid, reducer.name);
 		
 		
 		/* call open method of dfs namenode and get the corresponding metadata */
@@ -144,14 +169,14 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 		
 		/* according to the metadata, choose proper number of tasktrackers to do the job 
 		 * store relative informations in jobScheduler */
-		HashMap<String, HashSet<Integer>> mapperToChunks = jobScheduler.decideMappers(filechunks,jid);
+		HashMap<String, HashMap<Integer, String>> mapperToChunks = jobScheduler.decideMappers(filechunks,jid);
 		
 		/* for every mapper transfer the filename, corresponding nodes and corresponding chunk number to it */
 		for (String node : mapperToChunks.keySet()) {
 			Registry reg = LocateRegistry.getRegistry(node, taskPort);
 			try {
 				TaskTrackerI tasktracker = (TaskTrackerI) reg.lookup(taskServiceName);
-				tasktracker.pushMapTask(jid, null, conf.getInputfile(), mapperToChunks.get(node));
+				tasktracker.pushMapTask(jid, conf.getInputfile(), mapperToChunks.get(node));
 			} catch (NotBoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -187,6 +212,20 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 		/* check the unimplementd number of reducers and report progress */
 		
 		return jobScheduler.getReducerPercet(jobid);
+	}
+
+	@Override
+	public Pair readMapper(Integer jid) throws RemoteException {
+		Pair pair = new Pair(mappername.get(jid), Util.readFromFile(mappers.get(jid)));
+
+		return pair;
+	}
+
+	@Override
+	public Pair readReducer(Integer jid) throws RemoteException {
+		Pair pair = new Pair(reducername.get(jid), Util.readFromFile(reducers.get(jid)));
+
+		return pair;
 	}
 
 }
