@@ -2,25 +2,20 @@ import java.io.*;
 import java.util.*;
 import java.lang.Math;
 
-public class Partitioner {
+public final class Partitioner {
 
+    //HashMap<String, Integer> keyHashcode=new HashMap<String,Integer>();
+    //String[] partitions;
     
-    List<inputFormatAbs.kvPair> collection=new ArrayList<inputFormatAbs.kvPair>();
-    HashSet<String> uniqueKeys =new HashSet<String>();
-    int partitionNum;
-    
-    HashMap<String, Integer> keyHashcode=new HashMap<String,Integer>();
-    String[] partitions;
-    
-    public Partitioner(List<inputFormatAbs.kvPair> kvPairs, HashSet<String> uKeys, Integer partitionN)
+    public Partitioner()
     {
-        this.collection=kvPairs;
-        this.uniqueKeys=uKeys;
-        this.partitionNum=partitionN;
-        this.partitions= new String[partitionN];
+
     }
     
-    public String[] partition(){
+    public static String[] partition(List<inputFormatAbs.kvPair> collection, HashSet<String> uniqueKeys, Integer partitionNum){
+        HashMap<String, Integer> keyHashcode=new HashMap<String,Integer>();
+        String[] partitions=new String[partitionNum];
+        
         for (String key:uniqueKeys){
             keyHashcode.put(key,(key.hashCode())%partitionNum);
         }
