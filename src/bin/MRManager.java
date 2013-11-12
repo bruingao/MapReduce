@@ -1,5 +1,7 @@
 package bin;
 
+import java.io.*;
+import java.util.*;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -39,7 +41,8 @@ public class MRManager {
 		NameNodeI namenode = null;
 		
 		registry = LocateRegistry.getRegistry(registryHostname, registryPort);
-		namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
+		//namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
+		namenode = (NameNodeI)registry.lookup(nameNodeServiceName);
 		
 		String cmd = cmds[1];
 		
@@ -66,6 +69,29 @@ public class MRManager {
 					}
 					System.out.println();
 				}
+				break;
+		    case "export":
+		        if(cmds.length<3){
+		            System.out.println("Please indicate the file name");
+					break;
+		        }
+		        String theFilename = cmds[2];
+		        
+		        ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>> theFiles = namenode.listFiles();
+		        HashMap<Integer, HashSet<String>> filechunks = theFiles.get(theFilename);
+		        SortedSet<Integer> chunkNums = new TreeSet<Integer>(filechunks.keySet());
+		        
+		        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+		        for (Integer chunknum : chunkNums){
+		            String dnode=filechunks.get(chunknum).iterator().next();
+		            registry = LocateRegistry.getRegistry(dnode, registryPort);
+					DataNodeI datanodeI = (DataNodeI)registry.lookup(dataNodeServiceName);
+					byte[] chunkContent = datanodeI.read(theFilename+chunknum);
+					byteStream.write(chunkContent);
+		        }
+                byte[] fileContent=byteStream.toByteArray();
+                Util.writeBinaryToFile(fileContent,theFilename);
+		        
 				break;
 			case "import":
 				if(cmds.length < 3) {
@@ -127,7 +153,9 @@ public class MRManager {
 				
 				for(int chunk : res.keySet()) {
 					for (String dnode : res.get(chunk)){
-						DataNodeI datanodeI = (DataNodeI)registry.lookup(dnode+"/"+dataNodeServiceName);
+					
+					    registry = LocateRegistry.getRegistry(dnode, registryPort);
+						DataNodeI datanodeI = (DataNodeI)registry.lookup(dataNodeServiceName);
 						datanodeI.write(filename+chunk, Arrays.copyOfRange(content, range.get(chunk), range.get(chunk+1)));
 					}
 				}
@@ -154,7 +182,8 @@ public class MRManager {
 				
 				for(int chunk : file.keySet()) {
 					for (String dnode : file.get(chunk)){
-						DataNodeI datanodeI = (DataNodeI)registry.lookup(dnode+"/"+dataNodeServiceName);
+					    registry = LocateRegistry.getRegistry(dnode, registryPort);
+						DataNodeI datanodeI = (DataNodeI)registry.lookup(dataNodeServiceName);
 						datanodeI.removeFile(fname + chunk);
 					}
 				}
