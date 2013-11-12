@@ -110,14 +110,9 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		Util.writeObject(dataNodePath + "files", files);
 	}
 
-	public static void readDataNodes(String filename) {
-		String content = null;
-		try {
-			content = new String(Util.readFromFile(filename),"UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+	public static void readDataNodes(String filename) throws UnsupportedEncodingException {
+		String content = new String(Util.readFromFile(filename),"UTF-8");
+		
 		String lines[] = content.split("\n");
 		for(int i = 0; i < lines.length; i++) {
 			add_ts(datanodes,lines[i]);
@@ -180,7 +175,7 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 	    }
 	    catch (Exception e)
 	    {
-	    	e.printStackTrace();
+	    	System.out.println("Exception happend when running the Datanode!");
 	    }
 		
 	}

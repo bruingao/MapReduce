@@ -84,7 +84,7 @@ public final class dfsScheduler {
 		for (String datanode : nodeToReplicas.keySet()) {
 			int size = nodeToReplicas.get(datanode).size();
 			
-			if(nodes != null && nodes.contains(datanode)) 
+			if(nodes != null && nodes.contains(datanode) && (!status.get(datanode)))
 				continue;
 			
 			if(cnt < num) {
@@ -141,6 +141,22 @@ public final class dfsScheduler {
 				if(size > sizes[mindex]) {
 					res[mindex] = datanode;
 					sizes[mindex] = size;
+				}
+			}
+		}
+		
+		return res;
+	}
+	
+	/* get a file's corresponding information */
+	public static HashMap<Integer, HashSet<String>> openFile(String filename) {
+		HashMap<Integer, HashSet<String>> res = 
+				(HashMap<Integer, HashSet<String>>) dfsScheduler.getFile(filename).clone();
+		
+		for (int chunk : res.keySet()) {
+			for (String node :res.get(chunk)) {
+				if(!status.get(node)) {
+					res.get(chunk).remove(node);
 				}
 			}
 		}

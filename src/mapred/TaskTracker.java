@@ -1,6 +1,5 @@
 package mapred;
 
-import java.io.UnsupportedEncodingException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -14,8 +13,6 @@ import java.util.concurrent.Executors;
 
 import Common.Pair;
 import Common.Util;
-
-import dfs.DataNodeI;
 
 public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 

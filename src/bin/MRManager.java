@@ -3,6 +3,7 @@ package bin;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,7 +17,7 @@ import Common.Util;
 public class MRManager {	
 	
 	/* configuration file */
-	private static String confName = "conf/dfs.conf";
+	private static String confName = "src/conf/dfs.conf";
 	
 	/* service name read from configuration file */
 	private static String nameNodeServiceName;
@@ -38,8 +39,7 @@ public class MRManager {
 		NameNodeI namenode = null;
 		
 		registry = LocateRegistry.getRegistry(registryHostname, registryPort);
-		//namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
-		namenode = (NameNodeI)registry.lookup(nameNodeServiceName);
+		namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
 		
 		String cmd = cmds[1];
 		
@@ -80,22 +80,35 @@ public class MRManager {
 				String inputname = cmds[2];
 				String filename = cmds[3];
 				
-				int linesize = 0;
 				byte[] content = Util.readFromFile(inputname);
-				while(true) {
-					if (content[linesize] == '\n')
-						break;
-					linesize++;
-				}
-	
-				linesize++;
-				
+					
 				int size = content.length;
 				
 				/* real chunk size similar to chunksize but round to avoid partial line in a chunk */
-				int csize = chunksize/linesize*linesize;
 				
-				int chunknumber = (size + csize - 1)/csize;
+//				int chunknumber = 0;
+//				
+//				int basis = chunksize;
+				
+				ArrayList<Integer> range = new ArrayList<Integer>();
+				
+//				range.add(0);
+//				
+//				while(size >= basis) {
+//					chunknumber++;
+//					while (content[basis] != '\n') {
+//						basis--;
+//					}
+//					range.add(basis+1);
+//					basis += chunksize;
+//				}
+//				
+//				if(basis != size) {
+//					chunknumber++;
+//					range.add(basis+1);
+//				}
+				
+				int chunknumber = Util.decideChunkNumber(size, chunksize, range, content);
 				
 				HashMap<Integer,HashSet<String>> res 
 					= namenode.writeFile(filename, chunknumber);
@@ -114,9 +127,8 @@ public class MRManager {
 				
 				for(int chunk : res.keySet()) {
 					for (String dnode : res.get(chunk)){
-						Registry dnRegistry=LocateRegistry.getRegistry(dnode,registryPort);
-						DataNodeI datanodeI = (DataNodeI)dnRegistry.lookup(dataNodeServiceName);
-						datanodeI.write(filename+chunk, Arrays.copyOfRange(content, chunk * csize, (chunk+1)*csize));
+						DataNodeI datanodeI = (DataNodeI)registry.lookup(dnode+"/"+dataNodeServiceName);
+						datanodeI.write(filename+chunk, Arrays.copyOfRange(content, range.get(chunk), range.get(chunk+1)));
 					}
 				}
 				
@@ -142,8 +154,7 @@ public class MRManager {
 				
 				for(int chunk : file.keySet()) {
 					for (String dnode : file.get(chunk)){
-						Registry dnRegistry=LocateRegistry.getRegistry(dnode,registryPort);
-						DataNodeI datanodeI = (DataNodeI)dnRegistry.lookup(dataNodeServiceName);
+						DataNodeI datanodeI = (DataNodeI)registry.lookup(dnode+"/"+dataNodeServiceName);
 						datanodeI.removeFile(fname + chunk);
 					}
 				}

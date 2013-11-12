@@ -1,5 +1,7 @@
 package mapred;
 
+import Common.Collector;
+
 public interface Reducer {
-	void reduce();
+	public void reduce(String key, String value, Collector collector);
 }

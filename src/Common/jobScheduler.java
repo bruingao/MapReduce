@@ -1,7 +1,5 @@
 package Common;
 
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -55,7 +53,11 @@ public final class jobScheduler {
 	
 	/* job To reducer taskTrackers and corresponding partitions */
 	private static ConcurrentHashMap<Integer, HashMap<String, HashSet<Integer>>> jobToReducers
-	= new ConcurrentHashMap<Integer, HashMap<String, HashSet<Integer>>>();
+		= new ConcurrentHashMap<Integer, HashMap<String, HashSet<Integer>>>();
+	
+//	/* which nodes has the intermediate files */
+//	private static ConcurrentHashMap<Integer, String> jobToInter
+//		=new ConcurrentHashMap<Integer, String>(); 
 	
 	public static double getMapperPercent(int jid) {
 		return (double)uncompletedMappers.get(jid)/(double)numMappers.get(jid);
@@ -123,6 +125,41 @@ public final class jobScheduler {
 		numReducers.put(jid, -1);
 		
 		return nodeTochunks;
+	}
+	
+	public static void mapperSucceed(int jid, String tnode) {
+		int chunknum = jobToMappers.get(jid).get(tnode).size();
+		
+		int mc = JobTracker.minChunk;
+		nodeToNumMappers.put(tnode, nodeToNumMappers.get(tnode) -  (chunknum + mc -1)/mc);
+		jobToMappers.get(jid).get(tnode).clear();
+		uncompletedMappers.put(jid, uncompletedMappers.get(jid) - 1);
+	}
+	
+	public static Pair mapperFail(int jid, String tnode) {
+		/* set the failed node status to false */
+		nodeStatus.put(tnode, false);
+		
+		/* now choose the optimal node to handle the job */
+		String opNode = chooseBestNode(nodeStatus.keySet());
+		
+		/* what chunk does this failed node has */
+		HashMap<Integer, String> failChunk = jobToMappers.get(jid).get(tnode);
+		
+		/* what chunk does this optimal node has */
+		HashMap<Integer, String> opChunk = jobToMappers.get(jid).get(opNode);
+		
+		if (opChunk == null)
+			opChunk = failChunk;
+		else
+			opChunk.putAll(failChunk);
+		
+		jobToMappers.get(jid).remove(tnode);
+		
+		jobToMappers.get(jid).put(opNode, opChunk);
+		
+		/* return the best node and the failed chunk */
+		return new Pair(opNode, failChunk);
 	}
 	
 	

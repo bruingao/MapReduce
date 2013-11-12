@@ -11,10 +11,10 @@ import java.util.HashSet;
 import java.util.List;
 
 import Common.Util;
+import Common.Collector;
+import Common.Partitioner;
 
 import dfs.DataNodeI;
-import format.Collector;
-import format.Partitioner;
 import format.inputFormatAbs;
 import format.inputFormatAbs.kvPair;
 
@@ -98,8 +98,7 @@ public class MapRunner {
 			
 			collector.sortStringKey();
 			
-			Partitioner partitioner = new Partitioner(collector.collection, collector.uniqueKeys, numPartitions);
-			String pContents[] = partitioner.partition();
+			String pContents[] = Partitioner.partition(collector.collection, collector.uniqueKeys, numPartitions);
 			
 			/* partition */
 			String partitions[] = new String[numPartitions];

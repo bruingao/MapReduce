@@ -15,6 +15,8 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+
 /**
  * Util is a utility class for our program. It compute the hash code of a givin method.
  * 
@@ -197,9 +199,10 @@ public final class Util {
 			}
 		} 
 		FileOutputStream out = null;
+		ObjectOutputStream oout = null;
 		try {
 			out = new FileOutputStream(newfile);
-			ObjectOutputStream oout = new ObjectOutputStream(out);
+			oout = new ObjectOutputStream(out);
 			oout.writeObject(obj);
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -208,6 +211,7 @@ public final class Util {
 		}finally {
 			try {
 				out.close();
+				oout.close();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -223,9 +227,10 @@ public final class Util {
 		} 
 		FileInputStream in = null;
 		Object content = null;
+		ObjectInputStream iin = null;
 		try {
 			in = new FileInputStream(newfile);
-			ObjectInputStream iin = new ObjectInputStream(in);
+			iin = new ObjectInputStream(in);
 			content = iin.readObject();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -237,6 +242,7 @@ public final class Util {
 		}finally {
 			try {
 				in.close();
+				iin.close();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -268,5 +274,29 @@ public final class Util {
 		}
 	}
 		 
+	public static int decideChunkNumber (int filesize, int chunksize, ArrayList<Integer> range, byte[] content) {
+		
+		int chunknumber = 0;
+		
+		int basis = chunksize;
+
+		range.add(0);
+		
+		while(filesize >= basis) {
+			chunknumber++;
+			while (content[basis] != '\n') {
+				basis--;
+			}
+			range.add(basis+1);
+			basis += chunksize;
+		}
+		
+		if(basis != filesize) {
+			chunknumber++;
+			range.add(basis+1);
+		}
+		
+		return chunknumber;
+	}
 		
 }

@@ -7,7 +7,6 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import dfs.NameNodeI;

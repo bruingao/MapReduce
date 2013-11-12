@@ -16,9 +16,7 @@ public class JobClient {
 	private static Registry registry;
 	
 	private static String confPath = "src/conf/mapred.conf";
-	
-	private static String slavePath = "src/conf/slaves";
-	
+		
 	/* job tracker's host address */
 	private static String jobHostname;
 	

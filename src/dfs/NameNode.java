@@ -101,19 +101,22 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 						candidates.add(datanode);
 					}
 				}
-				if (cnt > replicaFactor) {
-
-					String res[] = dfsScheduler.chooseHeavy(cnt-replicaFactor, (String[])candidates.toArray());
-					
-					for (String r : res) {
-						checkThread t = new checkThread(r, registryPort, dataNodeServiceName);
-						t.setFilename(name);
-						t.setChunknumber(i);
-						t.setOp(checkThread.OP.DELETE);
-						executor.execute(t);
-					}
-				}
-				else if (cnt < replicaFactor) {
+				
+				/* may cause serious conflict problem, so disable this */
+				
+//				if (cnt > replicaFactor) {
+//
+//					String res[] = dfsScheduler.chooseHeavy(cnt-replicaFactor, (String[])candidates.toArray());
+//					
+//					for (String r : res) {
+//						checkThread t = new checkThread(r, registryPort, dataNodeServiceName);
+//						t.setFilename(name);
+//						t.setChunknumber(i);
+//						t.setOp(checkThread.OP.DELETE);
+//						executor.execute(t);
+//					}
+//				}
+				if (cnt < replicaFactor) {
 					String res[] = dfsScheduler.chooseLight(replicaFactor - cnt, candidates);
 					
 					for (String r : res) {
@@ -151,7 +154,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 			throws RemoteException {
 
 		/* TaskTacker call this method to get the files' relica places */
-		return dfsScheduler.getFile(filename);
+		return dfsScheduler.openFile(filename);
 	}
 
 	@Override
@@ -169,14 +172,10 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 		Util.writeObject(NameNode.nameNodePath+"tempfiles", dfsScheduler.getTempFiles());
 	}
 	
-	public static void readDataNodes(String filename) {
-		String content = null;
-		try {
-			content = new String(Util.readFromFile(filename), "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+	public static void readDataNodes(String filename) throws UnsupportedEncodingException {
+		
+		String	content = new String(Util.readFromFile(filename), "UTF-8");
+		
 		String lines[] = content.split("\n");
 		for(int i = 0; i < lines.length; i++) {
 			dfsScheduler.getStatus().put(lines[i], false);
@@ -219,7 +218,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	    }
 	    catch (Exception e)
 	    {
-	    	e.printStackTrace();
+	    	System.out.println("Exception happened when starting the namenode!");
 	    }
 	}
 
