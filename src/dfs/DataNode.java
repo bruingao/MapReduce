@@ -1,5 +1,6 @@
 package dfs;
 
+import java.io.*;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.rmi.NotBoundException;
@@ -103,16 +104,16 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 	@Override
 	public void removeFile(String filename) throws RemoteException {
 				
-		try {
-            Files.delete(filename);
-        } catch (NoSuchFileException x) {
-            System.err.format("%s: no such" + " file or directory%n", filename);
-        } catch (DirectoryNotEmptyException x) {
-            System.err.format("%s not empty%n", filename);
-        } catch (IOException x) {
-            // File permission problems are caught here.
-            System.err.println(x);
-        }
+		try{
+    		File file = new File(filename);
+    		if(file.delete()){
+    			System.out.println(file.getName() + " is deleted!");
+    		}else{
+    			System.out.println("Delete operation is failed.");
+    		}
+    	}catch(Exception e){
+    		e.printStackTrace();
+    	}
 
 		remove_ts(files,filename);
 		
