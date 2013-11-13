@@ -1,10 +1,11 @@
 registryHostname=128.2.13.133
-registryPort=1099
+nameRegPort=1199
 nameNodePort=15442
 nameNodeServiceName=namenode
-nameNodePath=/home/richard/namenode/
+nameNodePath=/tmp/mrtest/
+dataRegPort=1200
 dataNodePort=15441
 dataNodeServiceName=datanode
-dataNodePath=/home/richard/datanode/
+dataNodePath=/tmp/mrtest/
 chunksize=2048
 replicaFactor=2

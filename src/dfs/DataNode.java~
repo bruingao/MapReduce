@@ -42,13 +42,18 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		
 	private static String registryHostname;
 	
-	private static Integer registryPort;
+	private static Integer nameRegPort;
+	private static Integer dataRegPort;
 	
 	private static Integer dataNodePort;
 		
 	private static String dataNodeServiceName;
 	
 	private static String nameNodeServiceName;
+	
+	public DataNode() throws RemoteException{
+	
+	}
 	
 	private static void add_ts(HashSet<String> obj, String filename) {
 		synchronized(obj) {
@@ -60,9 +65,6 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		synchronized(obj) {
 			files.remove(filename);
 		}
-	}
-	
-	public DataNode() throws RemoteException{
 	}
 	
 	/* init work */
@@ -104,19 +106,19 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 	@Override
 	public void removeFile(String filename) throws RemoteException {
 				
-		try {
-            Files.delete(filename);
-        } catch (NoSuchFileException x) {
-            System.err.format("%s: no such" + " file or directory%n", filename);
-        } catch (DirectoryNotEmptyException x) {
-            System.err.format("%s not empty%n", filename);
-        } catch (IOException x) {
-            // File permission problems are caught here.
-            System.err.println(x);
-        }
+		try{
+    		File file = new File(dataNodePath+filename);
+    		file.setWritable(true);
+    		if(file.delete()){
+    			System.out.println(file.getName() + " is deleted!");
+    		}else{
+    			System.out.println("Delete operation is failed.");
+    		}
+    	}catch(Exception e){
+    		e.printStackTrace();
+    	}
 
 		remove_ts(files,filename);
-		
 		
 		/* check point */
 		Util.writeObject(dataNodePath + "files", files);
@@ -146,7 +148,7 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		
 		try {
 		
-		    Registry dnRegistry=LocateRegistry.getRegistry(nodes[index],registryPort);
+		    Registry dnRegistry=LocateRegistry.getRegistry(nodes[index],dataRegPort);
 			DataNodeI datanode = (DataNodeI)dnRegistry.lookup(dataNodeServiceName);
 			byte[] content = datanode.read(filename);
 			this.write(filename, content);
@@ -187,6 +189,8 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 	    }
 	    catch (Exception e)
 	    {
+   	    	e.printStackTrace();
+
 	    	System.out.println("Exception happend when running the Datanode!");
 	    }
 		

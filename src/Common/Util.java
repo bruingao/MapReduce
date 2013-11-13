@@ -292,7 +292,7 @@ public final class Util {
 		    chunknumber++;
 		    basis+=chunksize;
 		}
-		if(range.get(range.size()-1)<filesize){
+		if(range.get(range.size()-1)<filesize) {
 		    range.add(filesize);
 		    chunknumber++;
 		}

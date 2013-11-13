@@ -3,6 +3,7 @@ package mapred;
 import java.io.IOException;
 import java.io.InputStream;
 import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.HashSet;
@@ -41,7 +42,7 @@ public class taskThread implements Runnable{
 	}
 	
 	@Override
-	public void run() {
+	public void run(){
 		
 		String cmd = "java "+ "MapRunner" + " " + this.classname + " " + numPartitions + " " + partitionPath 
 				+ " " +jid + " " + numOfChunks
@@ -57,14 +58,16 @@ public class taskThread implements Runnable{
 		
 		ProcessBuilder process = new ProcessBuilder(cmd);
 		
+		JobTrackerI jobtracker = null;
+				
 		try {
 			Process task = process.start();
 			InputStream str = task.getInputStream();
 			int exitStatus = task.waitFor();
 			String response = Util.convertStreamToStr(str);
 			
-			Registry reg = LocateRegistry.getRegistry(TaskTracker.jobHostname, TaskTracker.registryPort);
-			JobTrackerI jobtracker = (JobTrackerI)reg.lookup(TaskTracker.jobServiceName);
+			Registry reg = LocateRegistry.getRegistry(TaskTracker.jobHostname, TaskTracker.taskRegPort);
+			jobtracker = (JobTrackerI)reg.lookup(TaskTracker.jobServiceName);
 			
 			if(TaskTracker.jobToIncompleteMapper.get(jid) != null) {
 				/* process response and exit status */
@@ -72,15 +75,24 @@ public class taskThread implements Runnable{
 					jobtracker.notifyMapResult(false, jid, TaskTracker.hostAddress);
 					TaskTracker.jobToIncompleteMapper.remove(jid);
 					TaskTracker.jobToInter.remove(jid);
+					System.out.println("Job "+jid +"Failed!");
 				} else {
-					String files[] = response.split("\n");
+//					String files[] = response.split("\n");
 					
 					HashSet<String[]> temp = TaskTracker.jobToInter.get(jid);
 					
 					if(temp == null)
 						temp = new HashSet<String[]>();
-						
-					temp.add(files);
+					
+					String partitions[] = new String[numPartitions];
+					String suffix = "-" + chunks.toArray()[0].toString();
+					for(int i = 0; i < numPartitions; i++) {
+						partitions[i] = jid+"partition"+i+suffix;
+												
+						System.out.println(partitions[i]);
+					}	
+					
+					temp.add(partitions);
 					
 					TaskTracker.jobToInter.put(jid, temp);
 					
@@ -90,19 +102,46 @@ public class taskThread implements Runnable{
 						jobtracker.notifyMapResult(true, jid, TaskTracker.hostAddress);
 						TaskTracker.jobToIncompleteMapper.remove(jid);
 					}
+					
+					System.out.println("Job "+jid +"Succeed!");
 				}
 			}
 			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			if(jobtracker != null) {
+				try {
+					jobFail(jobtracker);
+				} catch (RemoteException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			try {
+				jobFail(jobtracker);
+			} catch (RemoteException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			
 		} catch (NotBoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			try {
+				jobFail(jobtracker);
+			} catch (RemoteException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+
 		}
 	}
+	
+	private void jobFail(JobTrackerI jobtracker) throws RemoteException {
+		System.out.println("Job "+jid +"Failed!");
+		TaskTracker.jobToIncompleteMapper.remove(jid);
+		TaskTracker.jobToInter.remove(jid);
+		jobtracker.notifyMapResult(false, jid, TaskTracker.hostAddress);
+	}
 
+	
 }

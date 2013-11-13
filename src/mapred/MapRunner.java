@@ -10,19 +10,17 @@ import java.rmi.registry.Registry;
 import java.util.HashSet;
 import java.util.List;
 
+import Common.Pair;
 import Common.Util;
 import Common.Collector;
 import Common.Partitioner;
 
 import dfs.DataNodeI;
 import format.inputFormatAbs;
-import format.inputFormatAbs.kvPair;
 
 public class MapRunner {
 	
 	private static Mapper mapper;
-	
-	
 
 	public static Mapper getMapper() {
 		return mapper;
@@ -89,16 +87,16 @@ public class MapRunner {
 					
 					inputFormatAbs iformat = constuctor.newInstance(content[c]);
 					
-					List<kvPair> pairs = iformat.getkvPairs();
+					List<Pair> pairs = iformat.getkvPairs();
 					
-					for(kvPair pair : pairs) {
-						mapper.map(pair.key, pair.value, collector);
+					for(Pair pair : pairs) {
+						mapper.map(pair.name, pair.content, collector);
 					}
 			}
 			
 			collector.sortStringKey();
 			
-			String pContents[] = Partitioner.partition(collector.collection, collector.uniqueKeys, numPartitions);
+			String pContents[] = Partitioner.partition(collector.collection,collector.uniqueKeys, numPartitions);
 			
 			/* partition */
 			String partitions[] = new String[numPartitions];
@@ -106,40 +104,41 @@ public class MapRunner {
 			for(i = 0; i < numPartitions; i++) {
 				partitions[i] = jid+"partition"+i+suffix;
 				
-				Util.writeBinaryToFile(pContents[i].getBytes("UTF-8"), partitionPath+partitions[i]);
+				Util.writeBinaryToFile(pContents[i].getBytes("UTF-8"), partitionPath+"/"+partitions[i]);
 				
-				System.out.println(partitions[i]);
+//				System.out.println(partitions[i]);
 			}
 			
 		} catch (RemoteException e) {
 			e.printStackTrace();
+			System.exit(-1);
 		} catch (NotBoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			System.exit(-1);
 		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			System.exit(-1);
 		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			System.exit(-1);
 		} catch (NoSuchMethodException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			System.exit(-1);
 		} catch (SecurityException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			System.exit(-1);
 		} catch (InstantiationException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			System.exit(-1);
 		} catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			System.exit(-1);
 		} catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			System.exit(-1);
 		} catch (InvocationTargetException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			System.exit(-1);
 		}
 
 		
