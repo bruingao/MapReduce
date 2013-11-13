@@ -75,7 +75,6 @@ public class checkThread implements Runnable{
 			
 			
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			if (e instanceof java.rmi.NotBoundException) {
 				System.out.println("Datanode "+dnode+" not startup.");
 			}

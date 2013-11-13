@@ -173,7 +173,7 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 			 DataNodeI stub = (DataNodeI) exportObject(datanode, dataNodePort);
 			 
 			 //registry = LocateRegistry.getRegistry(registryHostname, registryPort);
-			 registry = LocateRegistry.createRegistry(registryPort);
+			 registry = LocateRegistry.createRegistry(dataRegPort);
 			 //NameNodeI namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
 			 
 			 InetAddress address = InetAddress.getLocalHost();

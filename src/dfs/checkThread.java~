@@ -75,7 +75,6 @@ public class checkThread implements Runnable{
 			
 			
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			if (e instanceof java.rmi.NotBoundException) {
 				System.out.println("Datanode "+dnode+" not startup.");
 			}
@@ -107,7 +106,7 @@ public class checkThread implements Runnable{
 				cnt++;
 			}
 			
-			boolean res = datanode.replication(filename + chunknumber, nodes);
+			boolean res = datanode.replication(filename + chunknumber, temp);
 			
 			if (res) {
 				dfsScheduler.replication(filename, chunknumber, dnode);

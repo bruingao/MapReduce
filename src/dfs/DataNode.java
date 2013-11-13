@@ -72,12 +72,7 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		Object obj = Util.readObject(dataNodePath+"files");
 		if(obj != null)
 			files = (HashSet<String>) obj;
-		
-//		obj = Util.readObject(dataNodePath + "datanodes");
-//		if(obj != null)
-//			datanodes = (HashSet<String>) obj;
-//		else
-//			Util.writeObject(dataNodePath+"datanodes", datanodes);
+
 	}
 	
 	/* read the corresponding chunk according to the filename */

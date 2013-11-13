@@ -219,6 +219,8 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	    }
 	    catch (Exception e)
 	    {
+   	    	e.printStackTrace();
+
 	    	System.out.println("Exception happened when starting the namenode!");
 	    }
 	}

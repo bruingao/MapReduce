@@ -102,21 +102,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 						candidates.add(datanode);
 					}
 				}
-				
-				/* may cause serious conflict problem, so disable this */
-				
-//				if (cnt > replicaFactor) {
-//
-//					String res[] = dfsScheduler.chooseHeavy(cnt-replicaFactor, (String[])candidates.toArray());
-//					
-//					for (String r : res) {
-//						checkThread t = new checkThread(r, registryPort, dataNodeServiceName);
-//						t.setFilename(name);
-//						t.setChunknumber(i);
-//						t.setOp(checkThread.OP.DELETE);
-//						executor.execute(t);
-//					}
-//				}
+
 				if (cnt < replicaFactor) {
 					String res[] = dfsScheduler.chooseLight(replicaFactor - cnt, candidates);
 					
@@ -243,23 +229,10 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 		Util.writeObject(nameNodePath+"files", dfsScheduler.getFiles());
 		Util.writeObject(nameNodePath + "nodeToReplicas", dfsScheduler.getNodeToReplicas());
 	}
-    /*
-    @Override	
-	public void proxyRebind(String dataNodeServiceName, DataNodeI datanode) throws RemoteException {
-	    try
-	    {
-            registry.rebind(dataNodeServiceName, datanode);
-        }
-        catch (Exception e)
-	    {
-	    	e.printStackTrace();
-	    }
-	}
-	*/
+
 
 	@Override
 	public boolean checkname(String filename) throws RemoteException {
-		// TODO Auto-generated method stub
 		return dfsScheduler.checkname(filename);
 	}
 		
