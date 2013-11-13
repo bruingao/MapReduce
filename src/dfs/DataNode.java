@@ -105,7 +105,7 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 	public void removeFile(String filename) throws RemoteException {
 				
 		try{
-    		File file = new File(filename);
+    		File file = new File(dataNodePath+filename);
     		file.setWritable(true);
     		if(file.delete()){
     			System.out.println(file.getName() + " is deleted!");
