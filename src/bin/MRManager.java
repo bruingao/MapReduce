@@ -28,19 +28,22 @@ public class MRManager {
 	private static String registryHostname;
 	
 	/* registry port number read from configuration file */
-	private static Integer registryPort;
-				
+	private static Integer nameRegPort;
+	private static Integer dataRegPort;
+	
 	/* data node service name */
 	private static String dataNodeServiceName;
 	
 	/* chunk size */
 	private static Integer chunksize;
 	
+	
+	
 	private void doDfs(String[] cmds) throws RemoteException, Exception {
 		Registry registry;
 		NameNodeI namenode = null;
 		
-		registry = LocateRegistry.getRegistry(registryHostname, registryPort);
+		registry = LocateRegistry.getRegistry(registryHostname, nameRegPort);
 		//namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
 		namenode = (NameNodeI)registry.lookup(nameNodeServiceName);
 		
@@ -84,7 +87,7 @@ public class MRManager {
 		        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
 		        for (Integer chunknum : chunkNums){
 		            String dnode=filechunks.get(chunknum).iterator().next();
-		            registry = LocateRegistry.getRegistry(dnode, registryPort);
+		            registry = LocateRegistry.getRegistry(dnode, dataRegPort);
 					DataNodeI datanodeI = (DataNodeI)registry.lookup(dataNodeServiceName);
 					byte[] chunkContent = datanodeI.read(theFilename+chunknum);
 					byteStream.write(chunkContent);
@@ -154,7 +157,7 @@ public class MRManager {
 				for(int chunk : res.keySet()) {
 					for (String dnode : res.get(chunk)){
 					
-					    registry = LocateRegistry.getRegistry(dnode, registryPort);
+					    registry = LocateRegistry.getRegistry(dnode, dataRegPort);
 						DataNodeI datanodeI = (DataNodeI)registry.lookup(dataNodeServiceName);
 						datanodeI.write(filename+chunk, Arrays.copyOfRange(content, range.get(chunk), range.get(chunk+1)));
 					}
@@ -182,7 +185,7 @@ public class MRManager {
 				
 				for(int chunk : file.keySet()) {
 					for (String dnode : file.get(chunk)){
-					    registry = LocateRegistry.getRegistry(dnode, registryPort);
+					    registry = LocateRegistry.getRegistry(dnode, dataRegPort);
 						DataNodeI datanodeI = (DataNodeI)registry.lookup(dataNodeServiceName);
 						datanodeI.removeFile(fname + chunk);
 					}

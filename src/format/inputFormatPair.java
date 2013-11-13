@@ -2,6 +2,8 @@ package format;
 
 import java.util.*;
 
+import Common.Pair;
+
 public class inputFormatPair extends inputFormatAbs{
 
     public inputFormatPair(String content) {
@@ -9,11 +11,11 @@ public class inputFormatPair extends inputFormatAbs{
     }
     
   
-    public List<kvPair> getkvPairs() {
+    public List<Pair> getkvPairs() {
         String[] lines=content.split("\n");
         for (int i=0;i<lines.length;i++){
             String[] words=lines[i].trim().split(" ");
-            kvPairs.add(new kvPair(words[0].trim(),words[1].trim()));
+            kvPairs.add(new Pair(words[0].trim(),words[1].trim()));
         }
         
         return kvPairs;

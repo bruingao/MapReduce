@@ -1,6 +1,5 @@
 package mapred;
 
-import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -15,7 +14,7 @@ public class JobClient {
 	
 	private static Registry registry;
 	
-	private static String confPath = "src/conf/mapred.conf";
+	private static String confPath = "conf/mapred.conf";
 		
 	/* job tracker's host address */
 	private static String jobHostname;
@@ -26,20 +25,22 @@ public class JobClient {
 	/* task tracker's port number */
 	private static Integer taskPort;
 	
-	/* registry port number */
-	private static Integer registryPort;
-	
 	/* job trakcer's service name */
 	private static String jobServiceName;
+	
+	private static Integer nameRegPort;
+	private static Integer dataRegPort;
+	private static Integer jobRegPort;
+	private static Integer taskRegPort;
 	
 	/* job id */
 	private static int jid;
 	
-	public void setConf(JobConf conf) {
+	private void setConf(JobConf conf) {
 		jobconf = conf;
 	}
 	
-	public static void runJob(JobConf conf) throws RemoteException{
+	public void runJob(JobConf conf) throws RemoteException{
 		/* read configuration file */
 		JobClient jobclient = new JobClient();
 		jobclient.setConf(conf);
@@ -51,14 +52,12 @@ public class JobClient {
 		JobTrackerI jobtracker = null;
 		
 		try {
-			registry = LocateRegistry.getRegistry(jobHostname, jobPort);
-			jobtracker = (JobTrackerI)registry.lookup(jobHostname+"/"+jobServiceName);
-		} catch (RemoteException e) {
-			// TODO Auto-generated catch block
+			registry = LocateRegistry.getRegistry(jobHostname, jobRegPort);
+			jobtracker = (JobTrackerI)registry.lookup(jobServiceName);
+		} catch (Exception e) {
 			e.printStackTrace();
-		} catch (NotBoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println("Exception happend when looking for services of JobTracker!");
+			System.exit(-1);
 		}
 		
 		Pair mapper = new Pair(conf.getMapperClass().getName(), 
@@ -70,10 +69,13 @@ public class JobClient {
 		/* return the job id or some errors may occur */
 		if (res == "OUTEXISTS") {
 			System.out.println("output file name is taken!");
+			System.exit(-1);
 		} else if (res == "INPUTNOTFOUND") {
 			System.out.println("input file not found!");
+			System.exit(-1);
 		} else if (res == "FAIL") {
 			System.out.println("Job failed!");
+			System.exit(-1);
 		}
 		
 		jid = Integer.parseInt(res);
@@ -97,8 +99,8 @@ public class JobClient {
 			try {
 				Thread.sleep(2000);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
+				System.out.println("Exception happened when monitoring!");
 			}
 		}
 		

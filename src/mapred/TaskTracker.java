@@ -1,5 +1,6 @@
 package mapred;
 
+import java.net.InetAddress;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -11,6 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import dfs.DataNodeI;
+
 import Common.Pair;
 import Common.Util;
 
@@ -21,9 +24,11 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	 */
 	private static final long serialVersionUID = -6393332207622467820L;
 
-	private static String confPath = "src/conf/mapred.conf";
+	private static String confPath = "conf/mapred.conf";
 	
-	private static String slavePath = "src/conf/slaves";
+	private static String dfsPath = "conf/dfs.conf";
+	
+	private static String slavePath = "conf/slaves";
 	
 	/* max number of mappers run on one machine */
 	public static Integer maxMappers;
@@ -47,8 +52,10 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	private static String dataNodeServiceName;
 	
 	/* registry port number */
-	public static Integer registryPort;
-	
+	private static Integer nameRegPort;
+	private static Integer dataRegPort;
+	private static Integer jobRegPort;
+	public static Integer taskRegPort;
 	/* file path (store map and reduce class */
 	private static String sysFilePath;
 	
@@ -60,6 +67,9 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	
 	/* job tracker service name */
 	public static String jobServiceName;
+	
+	/* task service name*/
+	public static String taskServiceName;
 	
 	/* number of paritions */
 	public static Integer numOfPartitions;
@@ -116,20 +126,10 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 		super();
 	}
 
+	@SuppressWarnings("unused")
 	@Override
 	public void pushMapTask(int jid, JobConf conf, 
 			HashMap<Integer, String> chunks) throws RemoteException {
-		/* store the files information in jobs and replicas */
-				
-//		/* queue */
-//		if (numMappers >= maxMappers) {
-//			HashMap<String, HashSet<String>> fileToReplicas = new HashMap<String, HashSet<String>>();
-//			for(int i : chunks) {
-//				fileToReplicas.put(filename+i, filereplicas.get(i));
-//			}
-//			jobToInput.put(jid, fileToReplicas);
-//			return;
-//		}
 		
 		/* distributed chunks */
 		int cnt = 0;
@@ -166,10 +166,12 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 		
 		increase_ts(numMappers, num);
 		
+		JobTrackerI jobtracker = null;
+		
 		/* read mapper class */
-		Registry reg = LocateRegistry.getRegistry(jobHostname, registryPort);
+		Registry reg = LocateRegistry.getRegistry(jobHostname, jobRegPort);
 		try {
-			JobTrackerI jobtracker = (JobTrackerI)reg.lookup(jobServiceName);
+			 jobtracker = (JobTrackerI)reg.lookup(jobServiceName);
 			
 			Pair mapper = jobtracker.readMapper(jid);
 			
@@ -178,21 +180,18 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 			/* new mapper instance and do job */
 			for (int nn = 0; nn < num; nn++) {
 				taskThread tt = new taskThread(jid, num, conf,
-						pcks.get(nn), dnodes.get(nn), registryPort,
+						pcks.get(nn), dnodes.get(nn), dataRegPort,
 						dataNodeServiceName, (String)mapper.name, interFilePath, numOfPartitions);
 				
 				executor.execute(tt);
 				
 			}
 		} catch (NotBoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			if (jobtracker != null) {
+				System.out.println("Job "+jid+"failed!");
+				jobtracker.notifyMapResult(false, jid, hostAddress);
+			}
 		}
-		
-				
-		/* store the intermediate result (mapper does this) */
-		
-		/* notify the job tracker if num of mapper reach zero */
 		
 	}
 
@@ -209,6 +208,37 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 		/* store the final result */
 		
 		/* notify the job tracker */
+	}
+	
+	
+	public static void main(String[] args) {
+		try
+	    {
+			 TaskTracker tasktracker = new TaskTracker();
+			 Util.readConfigurationFile(confPath, tasktracker);
+			 Util.readConfigurationFile(dfsPath, tasktracker);
+			 			 
+			 unexportObject(tasktracker, false);
+			 TaskTrackerI stub = (TaskTrackerI) exportObject(tasktracker, taskPort);
+			 
+			 Registry registry = LocateRegistry.createRegistry(taskRegPort);
+			 
+			 InetAddress address = InetAddress.getLocalHost();
+			 
+			 System.out.println(address.getHostAddress());
+			 
+			 hostAddress = address.getHostAddress();
+			 
+			 registry.rebind(taskServiceName, stub);
+			 
+			 System.out.println ("TaskTracker ready!");
+	    }
+	    catch (Exception e)
+	    {
+	    	e.printStackTrace();
+
+	    	System.out.println("Exception happend when running the TaskTracker!");
+	    }
 	}
 	
 }

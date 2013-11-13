@@ -41,13 +41,18 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		
 	private static String registryHostname;
 	
-	private static Integer registryPort;
+	private static Integer nameRegPort;
+	private static Integer dataRegPort;
 	
 	private static Integer dataNodePort;
 		
 	private static String dataNodeServiceName;
 	
 	private static String nameNodeServiceName;
+	
+	public DataNode() throws RemoteException{
+		
+	}
 	
 	private static void add_ts(HashSet<String> obj, String filename) {
 		synchronized(obj) {
@@ -59,9 +64,6 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		synchronized(obj) {
 			files.remove(filename);
 		}
-	}
-	
-	public DataNode() throws RemoteException{
 	}
 	
 	/* init work */
@@ -92,6 +94,9 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		
 		String temp = dataNodePath + filename;
 		
+		System.out.println(content);
+		System.out.println(temp);
+		
 		Util.writeBinaryToFile(content, temp);
 		
 		add_ts(files,filename);
@@ -104,7 +109,6 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 	public void removeFile(String filename) throws RemoteException {
 				
 		remove_ts(files,filename);
-		
 		
 		/* check point */
 		Util.writeObject(dataNodePath + "files", files);
@@ -134,7 +138,7 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		
 		try {
 		
-		    Registry dnRegistry=LocateRegistry.getRegistry(nodes[index],registryPort);
+		    Registry dnRegistry=LocateRegistry.getRegistry(nodes[index],dataRegPort);
 			DataNodeI datanode = (DataNodeI)dnRegistry.lookup(dataNodeServiceName);
 			byte[] content = datanode.read(filename);
 			this.write(filename, content);
@@ -159,7 +163,7 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 			 DataNodeI stub = (DataNodeI) exportObject(datanode, dataNodePort);
 			 
 			 //registry = LocateRegistry.getRegistry(registryHostname, registryPort);
-			 registry = LocateRegistry.createRegistry(registryPort);
+			 registry = LocateRegistry.createRegistry(dataRegPort);
 			 //NameNodeI namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
 			 
 			 InetAddress address = InetAddress.getLocalHost();
@@ -175,6 +179,8 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 	    }
 	    catch (Exception e)
 	    {
+	    	e.printStackTrace();
+
 	    	System.out.println("Exception happend when running the Datanode!");
 	    }
 		

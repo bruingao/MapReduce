@@ -284,7 +284,7 @@ public final class Util {
 		while (basis<filesize-1){
 		    if(content[basis-1]=='\n'){
 		    }else{
-		        while(content[basis-1]!='\n'){
+		        while(basis < filesize && content[basis-1]!='\n'){
 		            basis++;
 		        }
 		    }
@@ -292,8 +292,11 @@ public final class Util {
 		    chunknumber++;
 		    basis+=chunksize;
 		}
-		range.add(filesize);
-		chunknumber++;
+		
+		if(range.get(range.size()-1) < filesize) {
+			range.add(filesize);
+			chunknumber++;
+		}
 		
 		return chunknumber;
 		

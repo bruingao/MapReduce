@@ -39,7 +39,8 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	private static String registryHostname;
 	
 	/* registry port number read from configuration file */
-	private static Integer registryPort;
+	private static Integer nameRegPort;
+	private static Integer dataRegPort;
 	
 	/* the NameNode's port read from configuration file */
 	private static Integer nameNodePort;
@@ -82,7 +83,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	/* check data nodes */
 	public void checkDataNodes(){
 		for (String host : dfsScheduler.getStatus().keySet()) {
-			checkThread ct = new checkThread(host, registryPort, dataNodeServiceName);
+			checkThread ct = new checkThread(host, dataRegPort, dataNodeServiceName);
 			ct.setOp(checkThread.OP.STATUS);
 			executor.execute(ct);
 		}
@@ -123,11 +124,11 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 						if(r == null)
 							break;
 						
-						checkThread t = new checkThread(r, registryPort, dataNodeServiceName);
+						checkThread t = new checkThread(r, dataRegPort, dataNodeServiceName);
 						t.setFilename(name);
 						t.setChunknumber(i);
 						t.setOp(checkThread.OP.WRITE);
-						t.setNodes( (String[]) candidates.toArray());
+						t.setNodes(candidates);
 						executor.execute(t);
 					}
 				}
@@ -142,7 +143,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 		
 		HashMap<Integer, HashSet<String>> res = dfsScheduler.createFile(filename, num, replicaFactor);
 		
-		if (res.size() > 0)
+		if (res.size() > 0 && res != null)
 			/* check point */
 			Util.writeObject(nameNodePath + "tempfiles", dfsScheduler.getTempFiles());
 		
@@ -208,7 +209,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 			 unexportObject(server, false);
 			 NameNodeI stub = (NameNodeI) exportObject(server, nameNodePort);
 			 
-			 registry = LocateRegistry.createRegistry(registryPort);
+			 registry = LocateRegistry.createRegistry(nameRegPort);
 			 //registry.rebind(registryHostname + "/" + nameNodeServiceName, stub);
 			 registry.rebind(nameNodeServiceName, stub);
 			 
@@ -218,6 +219,8 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	    }
 	    catch (Exception e)
 	    {
+	    	e.printStackTrace();
+
 	    	System.out.println("Exception happened when starting the namenode!");
 	    }
 	}

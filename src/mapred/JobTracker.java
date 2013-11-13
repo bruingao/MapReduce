@@ -1,5 +1,7 @@
 package mapred;
 
+import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -9,6 +11,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
 
+import dfs.DataNode;
+import dfs.DataNodeI;
 import dfs.NameNodeI;
 
 import Common.Pair;
@@ -22,9 +26,11 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 	 */
 	private static final long serialVersionUID = 5442874947046318711L;
 	
-	private static String confPath = "src/conf/mapred.conf";
+	private static String confPath = "conf/mapred.conf";
 	
-	private static String slavePath = "src/conf/slaves";
+	private static String slavePath = "conf/slaves";
+	
+	private static String dfsPath = "conf/dfs.conf";
 	
 	/* max number of mappers run on one machine */
 	public static Integer maxMappers;
@@ -44,6 +50,9 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 	/* job tracker's host address */
 	private static String jobHostname;
 	
+	/* job trackers' service name */
+	private static String jobServiceName;
+	
 	/* taks tracker's service name */
 	private static String taskServiceName;
 	
@@ -54,7 +63,10 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 	private static Integer taskPort;
 	
 	/* registry port number */
-	public static Integer registryPort;
+	private static Integer nameRegPort;
+	private static Integer dataRegPort;
+	private static Integer jobRegPort;
+	private static Integer taskRegPort;
 	
 	/* file path (store map and reduce class */
 	private static String sysFilePath;
@@ -131,12 +143,12 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 		/* check output file name, if exists return OUTPUTEXISTS */
 		/* if input file not found return INPUTNOTFOUND */
 		
-		dfsRegistry = LocateRegistry.getRegistry(nameNodeHostname, nameNodePort);
+		dfsRegistry = LocateRegistry.getRegistry(nameNodeHostname, nameRegPort);
 		
 		NameNodeI namenode = null;
 		
 		try {
-			namenode = (NameNodeI)dfsRegistry.lookup(nameNodeHostname+"/"+nameNodeServiceName);
+			namenode = (NameNodeI)dfsRegistry.lookup(nameNodeServiceName);
 			if(namenode.checkname(conf.getOutputfile()))
 				return "OUTPUTEXISTS";
 			if(!namenode.checkname(conf.getInputfile()))
@@ -150,8 +162,8 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 		Integer jid = gjobid;
 		increaseId();
 		
-		String mapperPath = sysFilePath + "mapper"+ gjobid;
-		String reducerPath = sysFilePath + "reducer"+ gjobid;
+		String mapperPath = sysFilePath + "/mapper"+ gjobid;
+		String reducerPath = sysFilePath + "/reducer"+ gjobid;
 		
 		Util.writeBinaryToFile((byte[])mapper.content, mapperPath);
 		Util.writeBinaryToFile((byte[])reducer.content, reducerPath);
@@ -240,8 +252,11 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 			jobScheduler.mapperSucceed(jid, tnode);
 			
 			if (checkMapper(jid) <= 0.0) {
-				mappers.remove(jid);
-				mappername.remove(jid);
+				/* should not remove mappers's information 
+				 * in case of jobtracker failure in the process 
+				 * of retrieving intermediate data by reducers */
+//				mappers.remove(jid);
+//				mappername.remove(jid);
 				/* start reducers */
 				
 			}
@@ -251,7 +266,7 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 			String opNode = (String) newNode.name;
 			HashMap<Integer, String> failChunk = (HashMap<Integer, String>) newNode.content;
 			
-			Registry reg = LocateRegistry.getRegistry(opNode, taskPort);
+			Registry reg = LocateRegistry.getRegistry(opNode, taskRegPort);
 			try {
 				TaskTrackerI tasktracker = (TaskTrackerI) reg.lookup(taskServiceName);
 				tasktracker.pushMapTask(jid, confs.get(jid), failChunk);
@@ -262,5 +277,45 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 		}
 		
 	}
-
+	
+	public static void readSlaves(String filepath) throws UnsupportedEncodingException{
+		String content = new String(Util.readFromFile(filepath),"UTF-8");
+		
+		String lines[] = content.split("\n");
+		for(int i = 0; i < lines.length; i++) {
+			jobScheduler.nodeToNumMappers.put(lines[i], 0);
+			jobScheduler.nodeStatus.put(lines[i], false);
+			jobScheduler.nodeToNumReducers.put(lines[i], 0);
+		}	
+	}
+	
+	public static void main(String[] args) {
+		try
+	    {
+			 JobTracker jobtracker = new JobTracker();
+			 Util.readConfigurationFile(confPath, jobtracker);
+			 Util.readConfigurationFile(dfsPath, jobtracker);
+			 readSlaves(slavePath);
+			 
+			 /* check the status of slaves */
+			 
+			 unexportObject(jobtracker, false);
+			 JobTrackerI stub = (JobTrackerI) exportObject(jobtracker, jobPort);
+			 
+			 registry = LocateRegistry.createRegistry(jobRegPort);
+			 
+			 InetAddress address = InetAddress.getLocalHost();
+			 
+			 System.out.println(address.getHostAddress());
+			 
+			 registry.rebind(jobServiceName, stub);
+			 
+			 System.out.println ("JobTracker ready!");
+	    }
+	    catch (Exception e)
+	    {
+	    	e.printStackTrace();
+	    	System.out.println("Exception happend when running the JobTracker!");
+	    }
+	}
 }

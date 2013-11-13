@@ -2,6 +2,8 @@ package dfs;
 
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.HashSet;
+
 import Common.dfsScheduler;
 import Common.Util;
 
@@ -18,7 +20,7 @@ public class checkThread implements Runnable{
 	
 	private int chunknumber;
 
-	private String[] nodes;
+	private HashSet<String> nodes;
 
 	public enum OP  {WRITE, STATUS, DELETE};
 	
@@ -42,7 +44,7 @@ public class checkThread implements Runnable{
 		this.op = op;
 	}
 	
-	public void setNodes(String[] nodes) {
+	public void setNodes(HashSet<String> nodes) {
 		this.nodes = nodes;
 	}
 	
@@ -95,7 +97,17 @@ public class checkThread implements Runnable{
 		    Registry dnRegistry=LocateRegistry.getRegistry(dnode,registryPort);
 			//DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(dnode+"/"+serviceName);
 			DataNodeI datanode = (DataNodeI) dnRegistry.lookup(serviceName);
-			boolean res = datanode.replication(filename + chunknumber, nodes);
+			
+			String[] temp = new String[nodes.size()];
+			
+			int cnt = 0;
+			
+			for(String n : nodes) {
+				temp[cnt] = n;
+				cnt++;
+			}
+			
+			boolean res = datanode.replication(filename + chunknumber, temp);
 			
 			if (res) {
 				dfsScheduler.replication(filename, chunknumber, dnode);

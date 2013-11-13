@@ -14,22 +14,22 @@ public final class Partitioner {
 
     }
     
-    public static String[] partition(List<inputFormatAbs.kvPair> collection, HashSet<String> uniqueKeys, Integer partitionNum){
-        HashMap<String, Integer> keyHashcode=new HashMap<String,Integer>();
+    public static String[] partition(List<Pair> collection, HashSet<Object> uniqueKeys, Integer partitionNum){
+        HashMap<String, Object> keyHashcode=new HashMap<String,Object>();
         String[] partitions=new String[partitionNum];
         
-        for (String key:uniqueKeys){
-            keyHashcode.put(key,(key.hashCode())%partitionNum);
+        for (Object key:uniqueKeys){
+            keyHashcode.put((String)key,(key.hashCode())%partitionNum);
         }
         
-        for (inputFormatAbs.kvPair pair : collection){
-            int index=keyHashcode.get(pair.key);
+        for (Pair pair : collection){
+            int index=(int) keyHashcode.get(pair.name);
             if(partitions[index]==null){
-                partitions[index] = pair.key + " ";
+                partitions[index] = pair.name + " ";
             }else{
-                partitions[index] = partitions[index] + pair.key + " ";
+                partitions[index] = partitions[index] + pair.name + " ";
             }
-            partitions[index] = partitions[index] + pair.value + "\n";
+            partitions[index] = partitions[index] + pair.content + "\n";
         }
         
         return partitions;
