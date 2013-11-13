@@ -19,7 +19,7 @@ import Common.Util;
 public class MRManager {	
 	
 	/* configuration file */
-	private static String confName = "conf/dfs.conf";
+	private static String confName = "src/conf/dfs.conf";
 	
 	/* service name read from configuration file */
 	private static String nameNodeServiceName;
