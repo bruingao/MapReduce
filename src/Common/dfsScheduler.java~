@@ -299,9 +299,11 @@ public final class dfsScheduler {
 	}
 	
 	/** 
-     * update information after write success (temp file is verified)
+     * update information after replication of a file chunk
      * 
-     * @param filename      the name of the verified file
+     * @param filename      the name of the replicated file
+     * @param chunknumber   the chunk number of the file
+     * @param node          the DataNode on which the replication happened 
      * @since               1.0
      */
 	public static void transferTemp(String filename) {
@@ -314,29 +316,18 @@ public final class dfsScheduler {
 		}
 	}
 	
-	/** 
-     * delete a temp file
-     * 
-     * @param filename      the name of the temp file
-     * @since               1.0
-     */
 	public static void deleteTemp(String filename) {
 		tempFiles.remove(filename);
 	}
-    
-    /** 
-     * update information after removing a file
-     * 
-     * @param filename      the name of the removed file
-     * @since               1.0
-     */	
+	
 	public static void removeFile(String filename) {
 		for(Integer c : files.get(filename).keySet()) {
 			for (String node : files.get(filename).get(c)) {
 				nodeToReplicas.get(node).remove(filename+c);
 			}
 		}
-    	files.remove(filename);
+		
+		files.remove(filename);
 	}
 	
 	

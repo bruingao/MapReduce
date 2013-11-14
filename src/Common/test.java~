@@ -1,0 +1,32 @@
+import java.util.ArrayList;
+import java.util.List;
+
+public class test {
+    public static void main(String[] args) {
+        
+        List<Pair> a=Util.kvParse("1 3\n2 4\n4 d\n6 sda\n10 234\n30 gf\n",false);
+        List<Pair> b=Util.kvParse("3 3\n4 4\n5 d\n7 sda\n10 234\n21 erg\n",false);
+        
+        List<Pair> res=Util.kvMerge(a,b,false);
+        System.out.println((String)(res.get(0).name));
+        System.out.println((ArrayList<String>)(res.get(0).content));
+        System.out.println((String)(res.get(1).name));
+        System.out.println((ArrayList<String>)(res.get(1).content));
+        System.out.println((String)(res.get(2).name));
+        System.out.println((ArrayList<String>)(res.get(2).content));
+        System.out.println((String)(res.get(3).name));
+        System.out.println((ArrayList<String>)(res.get(3).content));
+        System.out.println((String)(res.get(4).name));
+        System.out.println((ArrayList<String>)(res.get(4).content));
+        System.out.println((String)(res.get(5).name));
+        System.out.println((ArrayList<String>)(res.get(5).content));
+        System.out.println((String)(res.get(6).name));
+        System.out.println((ArrayList<String>)(res.get(6).content));
+        System.out.println((String)(res.get(7).name));
+        System.out.println((ArrayList<String>)(res.get(7).content));
+        System.out.println((String)(res.get(8).name));
+        System.out.println((ArrayList<String>)(res.get(8).content));
+        System.out.println((String)(res.get(9).name));
+        System.out.println((ArrayList<String>)(res.get(9).content));
+    }
+}
