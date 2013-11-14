@@ -108,10 +108,10 @@ public final class dfsScheduler {
 			}
 		}
 		
-		if(cnt >= num) {
-			for (String datanode : nodeToFileNum.keySet()) {
-				nodeToFileNum.put(datanode, nodeToFileNum.get(datanode)+1);
-			}
+		for (String datanode : res) {
+			if(datanode == null)
+				break;
+			nodeToFileNum.put(datanode, nodeToFileNum.get(datanode)+1);
 		}
 		
 		return res;
