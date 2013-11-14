@@ -38,11 +38,11 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 	
 	private static final String idPath = "conf/jobid"; 
 	
-	/* max number of mappers run on one machine */
-	public static Integer maxMappers;
+	/* possible max number of tasks run on one machine */
+	public static Integer maxTasks;
 	
-	/* max number of reducers run on one machine */
-	public static Integer maxReducers;
+//	/* max number of reducers run on one machine */
+//	public static Integer maxReducers;
 	
 	/* name node's host address */
 	private static String nameNodeHostname;
@@ -408,9 +408,8 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 		
 		String lines[] = content.split("\n");
 		for(int i = 0; i < lines.length; i++) {
-			jobScheduler.nodeToNumMappers.put(lines[i], 0);
+			jobScheduler.nodeToNumTasks.put(lines[i], 0);
 			jobScheduler.nodeStatus.put(lines[i], false);
-			jobScheduler.nodeToNumReducers.put(lines[i], 0);
 			jobScheduler.nodeToMapJobs.put(lines[i],new HashSet<Integer>());
 			jobScheduler.nodeToReduceJobs.put(lines[i], new HashSet<Pair>());
 		}	

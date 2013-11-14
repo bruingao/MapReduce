@@ -335,14 +335,14 @@ public final class Util {
 		String lines[] = orderedContent.split("\n");
 		
 		ArrayList<String> l = new ArrayList<String>();
-        String[] kv=lines[0].trim().split(" ");
+        String[] kv=lines[0].split(" ");
 		l.add(kv[1]);
 		res.add(new Pair(kv[0], l));
 		
 		int index = 0;
 		
 		for (int i = 1;i < lines.length; i++) {
-            kv=lines[i].trim().split(" ");
+            kv=lines[i].split(" ");
             String temp = (String) res.get(index).name;
             
             if(kv[0] == temp) {

@@ -86,7 +86,7 @@ public final class dfsScheduler {
 //			int size = nodeToReplicas.get(datanode).size();
 			int size = nodeToFileNum.get(datanode);
 			
-			if(nodes != null && nodes.contains(datanode) && (!status.get(datanode)))
+			if((nodes != null && nodes.contains(datanode)) || (!status.get(datanode)))
 				continue;
 			
 			if(cnt < num) {

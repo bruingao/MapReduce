@@ -37,11 +37,13 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	
 	private static String slavePath = "conf/slaves";
 	
-	/* max number of mappers run on one machine */
-	public static Integer maxMappers;
+//	/* max number of mappers run on one machine */
+//	public static Integer maxMappers;
+//	
+//	/* max number of reducers run on one machine */
+//	public static Integer maxReducers;
 	
-	/* max number of reducers run on one machine */
-	public static Integer maxReducers;
+	public static Integer maxTasks;
 	
 	/* job tracker's host address */
 	public static String jobHostname;
@@ -300,7 +302,7 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 		
 		for(String[] path : filePath) {
 			try {
-				res.concat(new String(Util.readFromFile(interFilePath + path[partition]), "UTF-8"));
+				res.concat(new String(Util.readFromFile(interFilePath + "/" + path[partition]), "UTF-8"));
 			} catch (UnsupportedEncodingException e) {
 				e.printStackTrace();
 				return null;

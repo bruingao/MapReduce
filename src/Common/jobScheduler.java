@@ -21,13 +21,16 @@ public final class jobScheduler {
 //	private static ConcurrentHashMap<String, HashMap<Integer,Integer>> nodeToReducers 
 //		= new ConcurrentHashMap<String, HashMap<Integer,Integer>>();
 	
-	/* how many mappers run on this node */
-	public static ConcurrentHashMap<String, Integer> nodeToNumMappers
-	 	= new ConcurrentHashMap<String, Integer>();
+//	/* how many mappers run on this node */
+//	public static ConcurrentHashMap<String, Integer> nodeToNumMappers
+//	 	= new ConcurrentHashMap<String, Integer>();
+//	
+//	/* how many reducers run on this node */
+//	public static ConcurrentHashMap<String, Integer> nodeToNumReducers
+//		= new ConcurrentHashMap<String, Integer>();
 	
-	/* how many reducers run on this node */
-	public static ConcurrentHashMap<String, Integer> nodeToNumReducers
-		= new ConcurrentHashMap<String, Integer>();
+	public static ConcurrentHashMap<String, Integer> nodeToNumTasks
+ 	= new ConcurrentHashMap<String, Integer>();
 	
 	/* which map jobs are on which node */
 	public static ConcurrentHashMap<String, HashSet<Integer>> nodeToMapJobs
@@ -92,8 +95,8 @@ public final class jobScheduler {
 		for (int chunk : filechunks.keySet()) {
 			HashSet<String> nodes = filechunks.get(chunk);
 			/* choose among those nodes which have the file chunk */
-			String opNode = chooseBestNode(nodes, nodeToNumMappers);
-			
+			String opNode = chooseBestNode(nodes, nodeToNumTasks);
+			nodeToNumTasks.put(opNode, nodeToNumTasks.get(opNode)-1);
 			double point1 = -100;
 			
 			if(nodes == null) {
@@ -106,9 +109,9 @@ public final class jobScheduler {
 				return null;
 			}
 			
-			if(nodeToNumMappers.get(opNode)!=null)
+			if(nodeToNumTasks.get(opNode)!=null)
 				point1 = JobTracker.localBonus 
-						+ JobTracker.taskBonus * (JobTracker.maxMappers - nodeToNumMappers.get(opNode));
+						+ JobTracker.taskBonus * (JobTracker.maxTasks - nodeToNumTasks.get(opNode));
 			
 			if (opNode == null) {
 				System.out.println("This cannot happen because this project assumes " +
@@ -117,19 +120,21 @@ public final class jobScheduler {
 			}
 			
 			/* choose another one which has the least number of mappers */
-			String opNode2 = chooseBestNode(nodeStatus.keySet(), nodeToNumMappers);
-			
+			String opNode2 = chooseBestNode(nodeStatus.keySet(), nodeToNumTasks);
+			nodeToNumTasks.put(opNode2, nodeToNumTasks.get(opNode2)-1);
+
 			double point2 = -100;
-			if(nodeToNumMappers.get(opNode2)  != null)
-				point2 = JobTracker.taskBonus * (JobTracker.maxMappers - nodeToNumMappers.get(opNode2));
+			if(nodeToNumTasks.get(opNode2)  != null)
+				point2 = JobTracker.taskBonus * (JobTracker.maxTasks - nodeToNumTasks.get(opNode2));
 			
 			/* compare their points and obtain the best one */
-			opNode2 = point1 <= point2? opNode:opNode2;
+			opNode2 = point1 >= point2? opNode:opNode2;
 			
 			HashMap<Integer, String> chunks = nodeTochunks.get(opNode);
 			if(chunks == null)
 				chunks = new HashMap<Integer, String>();
 			
+			nodeToNumTasks.put(opNode2, nodeToNumTasks.get(opNode2)+1);
 			chunks.put(chunk, opNode);
 			nodeTochunks.put(opNode2, chunks);
 			
@@ -138,7 +143,7 @@ public final class jobScheduler {
 		/* add mappers number to that every chosen node */
 		for(String node : nodeTochunks.keySet()) {
 //			int mc = JobTracker.minChunk;
-			nodeToNumMappers.put(node, nodeToNumMappers.get(node)+ 1);
+//			nodeToNumTasks.put(node, nodeToNumTasks.get(node)+ 1);
 			HashSet<Integer> jobs = nodeToMapJobs.get(node);
 			
 			jobs.add(jid);
@@ -161,16 +166,22 @@ public final class jobScheduler {
 	public static ArrayList<String> decideReducers(int jid, int num) {
 		ArrayList<String> nodes = new ArrayList<String>();
 		for(int i = 0;i < num; i++) {
-			String opNode = chooseBestNode(nodeStatus.keySet(), nodeToNumReducers);
-			if(opNode == null)
+			String opNode = chooseBestNode(nodeStatus.keySet(), nodeToNumTasks);
+			if(opNode == null) {
+//				if(i > 0) {
+//					for(int j = 0;j<i;j++) {
+//						nodeToNumTasks.put(nodes.get(j), nodeToNumTasks.get(nodes.get(j))-1);
+//					}
+//				}
 				return null;
+			}
 			nodes.add(opNode);
+//			nodeToNumTasks.put(opNode, nodeToNumTasks.get(opNode)+1);
 		}
 		
 		/* update the hashmap independently from the last loop in case of choosebestnode return null */
 		if(nodes != null) {
 			for (int i = 0; i < num; i++) {
-				nodeToNumReducers.put(nodes.get(i), nodeToNumReducers.get(nodes.get(i)) + 1);
 				HashSet<Pair> jobs = nodeToReduceJobs.get(nodes.get(i));
 				
 				jobs.add(new Pair(jid, i));
@@ -189,28 +200,28 @@ public final class jobScheduler {
 //		int chunknum = jobToMappers.get(jid).get(tnode).size();
 //		
 //		int mc = JobTracker.minChunk;
-		System.out.println("before succeed: " + nodeToNumMappers.get(tnode));
+		System.out.println("before succeed: " + nodeToNumTasks.get(tnode));
 //		nodeToNumMappers.put(tnode, nodeToNumMappers.get(tnode) -  (chunknum + mc -1)/mc);
 		
-		nodeToNumMappers.put(tnode, nodeToNumMappers.get(tnode) -  1);
+		nodeToNumTasks.put(tnode, nodeToNumTasks.get(tnode) -  1);
 		
-		System.out.println("after succeed: " + nodeToNumMappers.get(tnode));
+		System.out.println("after succeed: " + nodeToNumTasks.get(tnode));
 
 		/* should not remove mappers's information 
 		 * in case of jobtracker failure in the process 
 		 * of retrieving intermediate data by reducers */
 		//jobToMappers.get(jid).get(tnode).clear();
 		nodeToMapJobs.get(tnode).remove(jid);
-		System.out.println("before succeed: " + uncompletedMappers.get(tnode));
+		System.out.println("before succeed: " + uncompletedMappers.get(jid));
 		uncompletedMappers.put(jid, uncompletedMappers.get(jid) - 1);
-		System.out.println("after succeed: " + uncompletedMappers.get(tnode));
+		System.out.println("after succeed: " + uncompletedMappers.get(jid));
 
 	}
 	
 	public static void reducerSucceed(int jid, String tnode, int partition) {
 		
 		/* Decrease the number of tnode by 1 */
-		nodeToNumReducers.put(tnode, nodeToNumReducers.get(tnode) - 1);
+		nodeToNumTasks.put(tnode, nodeToNumTasks.get(tnode) - 1);
 		
 		nodeToReduceJobs.get(tnode).remove(new Pair(jid, partition));
 
@@ -223,7 +234,7 @@ public final class jobScheduler {
 		nodeStatus.put(tnode, false);
 		
 		/* now choose the optimal node to handle the job */
-		String opNode = chooseBestNode(nodeStatus.keySet(), nodeToNumMappers);
+		String opNode = chooseBestNode(nodeStatus.keySet(), nodeToNumTasks);
 		
 		/* what chunk does this failed node has */
 		HashMap<Integer, String> failChunk = jobToMappers.get(jid).get(tnode);
@@ -231,7 +242,7 @@ public final class jobScheduler {
 //		int chunksize = failChunk.size();
 //		
 //		int mc = JobTracker.minChunk;
-		nodeToNumMappers.put(tnode, nodeToNumMappers.get(tnode) - 1);
+		nodeToNumTasks.put(tnode, nodeToNumTasks.get(tnode) - 1);
 		
 		nodeToMapJobs.get(tnode).remove(jid);
 
@@ -262,7 +273,7 @@ public final class jobScheduler {
 		
 		jobToMappers.get(jid).put(opNode, opChunk);
 		
-		nodeToNumMappers.put(opNode, nodeToNumMappers.get(opNode) + 1);
+//		nodeToNumTasks.put(opNode, nodeToNumTasks.get(opNode) + 1);
 		
 		nodeToMapJobs.get(opNode).add(jid);
 		
@@ -273,13 +284,13 @@ public final class jobScheduler {
 	/* reducer fail */
 	public static String reducerFail(int jid, String tnode, int partition) {
 		
-		nodeToNumReducers.put(tnode, nodeToNumReducers.get(tnode) - 1);
+		nodeToNumTasks.put(tnode, nodeToNumTasks.get(tnode) - 1);
 		
 		nodeStatus.put(tnode, false);
 		
 		nodeToReduceJobs.get(tnode).remove(new Pair(jid, partition));
 		
-		String opNode = chooseBestNode(nodeStatus.keySet(), nodeToNumReducers);
+		String opNode = chooseBestNode(nodeStatus.keySet(), nodeToNumTasks);
 		
 		nodeToReduceJobs.get(opNode).add(new Pair(jid,partition));
 		
@@ -302,17 +313,20 @@ public final class jobScheduler {
 			}
 		}
 		
+		if(res != null)
+			nodeToNumTasks.put(res, nodeToNumTasks.get(res)+1);
+		
 		return res;
 	}
 	
 	public static void removeAll(Integer jid) {
 		
 		for (String node : jobToMappers.get(jid).keySet()) {
-			nodeToNumMappers.put(node, nodeToNumMappers.get(node)-1);
+			nodeToNumTasks.put(node, nodeToNumTasks.get(node)-1);
 		}
 		
 		for (String node : jobToReducers.get(jid)) {
-			nodeToNumReducers.put(node, nodeToNumMappers.get(node)-1);
+			nodeToNumTasks.put(node, nodeToNumTasks.get(node)-1);
 		}
 		
 		for (String node : nodeToMapJobs.keySet()) {
