@@ -1,16 +1,23 @@
 package mapred;
 
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import mapred.JobTracker.NOTIFY_RESULT;
 
 import dfs.DataNodeI;
 
@@ -51,10 +58,19 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	/* data node's service name */
 	private static String dataNodeServiceName;
 	
+	/* name node's host name */
+	private static String nameNodeHostname;
+	
+	/* name node's service name */
+	private static String nameNodeServiceName;
+	
+	/* data chunk size */
+	private static Integer chunksize;
+	
 	/* registry port number */
 	private static Integer nameRegPort;
 	private static Integer dataRegPort;
-	private static Integer jobRegPort;
+	public static Integer jobRegPort;
 	public static Integer taskRegPort;
 	/* file path (store map and reduce class */
 	private static String sysFilePath;
@@ -131,36 +147,44 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	public void pushMapTask(int jid, JobConf conf, 
 			HashMap<Integer, String> chunks) throws RemoteException {
 		
+		System.out.println("chunk number:"+chunks.size());
+		
 		/* distributed chunks */
 		int cnt = 0;
 		int num = 0;
-		HashMap<Integer, HashSet<Integer>> pcks = new HashMap<Integer, HashSet<Integer>>();
-		HashMap<Integer, HashSet<String>> dnodes = new HashMap<Integer, HashSet<String>>();
-		HashSet<Integer> cks = null;
-		HashSet<String> nodes = null;
+		HashMap<Integer, ArrayList<Integer>> pcks = new HashMap<Integer, ArrayList<Integer>>();
+		HashMap<Integer, ArrayList<String>> dnodes = new HashMap<Integer, ArrayList<String>>();
+		ArrayList<Integer> cks = null;
+		ArrayList<String> nodes = null;
 		for (int c : chunks.keySet()) {
 			if(cnt == minChunk) {
-				pcks.put(cnt, cks);
-				dnodes.put(cnt, nodes);
+				pcks.put(num, cks);
+				dnodes.put(num, nodes);
 				cnt = 0;
 				num++;
 			}
 			if (cnt == 0) {
-				cks = new HashSet<Integer>();
-				nodes = new HashSet<String>();
+				cks = new ArrayList<Integer>();
+				nodes = new ArrayList<String>();
 			}
 			cks.add(c);
 			nodes.add(chunks.get(c));
 			cnt++;
 		}
-		num++;
+		if(cnt != minChunk) {
+			pcks.put(num, cks);
+			dnodes.put(num, nodes);
+			num++;
+		}
+		
+		System.out.println("Mapper:"+num);
 		
 		Integer n = jobToIncompleteMapper.get(jid);
 		
 		if (n == null)
 			n = num;
-		
-		n += num;
+		else 
+			n += num;
 		
 		jobToIncompleteMapper.put(jid, n);
 		
@@ -174,12 +198,14 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 			 jobtracker = (JobTrackerI)reg.lookup(jobServiceName);
 			
 			Pair mapper = jobtracker.readMapper(jid);
-			
-			Util.writeBinaryToFile((byte[])mapper.content, (String)mapper.name + ".class");
+						
+			String path = ((String)mapper.name).replace('.', '/');
+				
+			Util.writeBinaryToFile((byte[])mapper.content, path + ".class");
 			
 			/* new mapper instance and do job */
 			for (int nn = 0; nn < num; nn++) {
-				taskThread tt = new taskThread(jid, num, conf,
+				taskMapThread tt = new taskMapThread(jid, pcks.get(nn).size(), conf,
 						pcks.get(nn), dnodes.get(nn), dataRegPort,
 						dataNodeServiceName, (String)mapper.name, interFilePath, numOfPartitions);
 				
@@ -187,9 +213,11 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 				
 			}
 		} catch (NotBoundException e) {
+			/* if something bad happend in this function */
+			e.printStackTrace();
 			if (jobtracker != null) {
 				System.out.println("Job "+jid+"failed!");
-				jobtracker.notifyMapResult(false, jid, hostAddress);
+				jobtracker.notifyMapResult(JobTracker.NOTIFY_RESULT.FAIL, jid, hostAddress);
 			}
 		}
 		
@@ -197,17 +225,32 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 
 
 	@Override
-	public void pushReduceTask(int jobid, 
-			HashMap<String, String> files) throws RemoteException {
-		/* store the intermediate file information */
+	public void pushReduceTask(int jid, JobConf conf, 
+			HashSet<String> interNodes, int partition) throws RemoteException {		
 		
-		/* read the intermediate files*/
-		
-		/* read reducer class */
-		
-		/* store the final result */
-		
-		/* notify the job tracker */
+		JobTrackerI jobtracker = null;
+		try {
+			
+			/* read reducer class */
+			
+			Registry reg = LocateRegistry.getRegistry(jobHostname, jobRegPort);
+			
+			jobtracker = (JobTrackerI)reg.lookup(jobServiceName);
+			
+			Pair reducer = jobtracker.readReducer(jid);
+						
+			String path = ((String)reducer.name).replace('.', '/');
+				
+			Util.writeBinaryToFile((byte[])reducer.content, path + ".class");
+			
+			/* new reducer instance and do job */
+			runReduceTask(jid, conf, partition, (String)reducer.name, interNodes);
+			
+		} catch(Exception e) {
+			System.out.println("Job "+jid+"failed!");
+			jobtracker.notifyReduceResult(JobTracker.NOTIFY_RESULT.FAIL, jid, hostAddress, partition);		
+			e.printStackTrace();
+		}
 	}
 	
 	
@@ -235,10 +278,90 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	    }
 	    catch (Exception e)
 	    {
+	    	
 	    	e.printStackTrace();
-
+	    	
 	    	System.out.println("Exception happend when running the TaskTracker!");
 	    }
+	}
+	@Override
+	public boolean heartBeat() throws RemoteException {
+		return true;
+	}
+	@Override
+	public String getInterFiles(int jobid, int partition) throws RemoteException {
+		
+		HashSet<String[]> filePath = jobToInter.get(jobid);
+		
+		if (filePath == null)
+			return null;
+		
+		String res = "";
+		
+		for(String[] path : filePath) {
+			try {
+				res.concat(new String(Util.readFromFile(interFilePath + path[partition]), "UTF-8"));
+			} catch (UnsupportedEncodingException e) {
+				e.printStackTrace();
+				return null;
+			}
+		}
+		
+		return res;
+		
+	}
+	
+	public void runReduceTask (int jid, JobConf conf, 
+			int partition, String classname, Set<String> interNodes){
+		
+		
+		String cmd = "java mapred.ReduceRunner " + classname + " " + jid + " " + conf.getOutputfile() + " " +
+				conf.getOutputFormat().getName() + " " + dataRegPort + " " + dataNodeServiceName + " " + 
+				taskRegPort+ " " + taskServiceName + " " + nameRegPort + " " +
+				nameNodeServiceName + " " + nameNodeHostname + " " + partition + " " + chunksize + " " + interNodes.size();
+		
+		for (String node : interNodes) {
+			cmd += " " + node;
+		}
+		
+		System.out.println(cmd);
+		
+		JobTrackerI jobtracker = null;
+			
+		try {
+			int exitStatus = Util.buildProcess(cmd);
+			System.out.println("exitcode: "+exitStatus);
+			Registry reg = LocateRegistry.getRegistry(TaskTracker.jobHostname, TaskTracker.jobRegPort);
+			jobtracker = (JobTrackerI)reg.lookup(TaskTracker.jobServiceName);
+			
+			switch(exitStatus) {
+				case 0:
+					/* normal exit (notify the job tracker) */
+					System.out.println("reducer "+jid+" partition " + partition + " succeed!");
+					jobtracker.notifyReduceResult(JobTracker.NOTIFY_RESULT.SUCCESS, jid, hostAddress, partition);
+					break;
+				case -1:
+					/* job fail due to other reasons(datanode write failure or application error) */
+					System.out.println("reducer "+jid+" partition " + partition + " failed!");
+					jobtracker.notifyReduceResult(JobTracker.NOTIFY_RESULT.FAIL, jid, hostAddress, partition);
+					break;
+				case -2:
+					/* job fail due to nodes having intermediate file fail(need to restart mapper) */
+					System.out.println("reducer "+jid+" partition " + partition + " failed due to task tracker failure!");
+					jobtracker.notifyReduceResult(JobTracker.NOTIFY_RESULT.FAIL, jid, hostAddress, partition);
+					break;
+			}
+			
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (NotBoundException e) {
+			e.printStackTrace();
+		}
+		
+
+		
 	}
 	
 }

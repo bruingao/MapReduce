@@ -16,6 +16,8 @@ import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 /**
  * Util is a utility class for our program. It compute the hash code of a givin method.
@@ -169,6 +171,8 @@ public final class Util {
 					field.set(obj, temp[1]);
 				} else if (field.getType().equals(Integer.class)) {
 					field.set(obj, Integer.parseInt(temp[1]));
+				} else if (field.getType().equals(Double.class)) {
+					field.set(obj, Double.parseDouble(temp[1]));
 				}
 			} catch (NoSuchFieldException e){
 				
@@ -301,5 +305,197 @@ public final class Util {
 		return chunknumber;
 		
 	}
+	
+	public static int buildProcess(String cmd) throws InterruptedException, IOException {
 		
+		List<String> commands = new ArrayList<String>();
+		
+		for(String s : cmd.split(" "))
+			commands.add(s);
+		
+		ProcessBuilder process = new ProcessBuilder();
+		
+		process.command(commands);
+		
+		System.out.println("before start");
+		process.inheritIO();
+		Process task = process.start();
+		
+		System.out.println("after start");
+		
+		int exitStatus = task.waitFor();
+		
+		return exitStatus;
+
+	}
+	
+	public static ArrayList<Pair> parseStr(String orderedContent) {
+		ArrayList<Pair> res = new ArrayList<Pair>();
+		
+		String lines[] = orderedContent.split("\n");
+		
+		ArrayList<String> l = new ArrayList<String>();
+        String[] kv=lines[0].trim().split(" ");
+		l.add(kv[1]);
+		res.add(new Pair(kv[0], l));
+		
+		int index = 0;
+		
+		for (int i = 1;i < lines.length; i++) {
+            kv=lines[i].trim().split(" ");
+            String temp = (String) res.get(index).name;
+            
+            if(kv[0] == temp) {
+            	((ArrayList<String>)res.get(index).content).add(kv[1]);
+            } else {
+            	l = new ArrayList<String>();
+        		l.add(kv[1]);
+        		res.add(new Pair(kv[0], l));
+        		index++;
+            }
+            
+		}
+		
+		return res;
+	}
+	
+	public static ArrayList<Pair> mergeArray(ArrayList<Pair> p1, ArrayList<Pair> p2) {
+		ArrayList<Pair> res = new ArrayList<Pair>();
+		
+		int i = 0;
+		int j = 0;
+		
+		while (i < p1.size() && j < p2.size()) {
+			if(((String) p1.get(i).name).compareTo((String)p2.get(j).name) < 0) {
+				res.add(p1.get(i));
+				i++;
+			} else if (((String) p1.get(i).name).compareTo((String)p2.get(j).name) > 0) {
+				res.add(p2.get(j));
+				j++;
+			} else {
+				((ArrayList<String>)p1.get(i).content).addAll((ArrayList<String>)p2.get(j).content);
+				res.add(p1.get(i));
+				i++;
+				j++;
+			}
+		}
+		
+		while (i < p1.size()) {
+			res.add(p1.get(i));
+			i++;
+		}
+		
+		while (j < p2.size()) {
+			res.add(p2.get(j));
+			j++;
+		}
+		
+		return res;
+	}
+	
+	
+//    public static List<Pair> kvParse(String A, boolean isKeyInt) {
+//        List<Pair> alist=new ArrayList<Pair>();
+//        String[] parts=A.trim().split("\n");
+//        for (int i=0;i<parts.length;i++){
+//            String[] kv=parts[i].trim().split(" ");
+//            Pair akv;
+//            if (!isKeyInt){
+//                akv=new Pair(kv[0],kv[1]);
+//            } else {
+//                akv=new Pair(Integer.parseInt(kv[0]),kv[1]);
+//            }
+//            alist.add(akv);
+//        }
+//        return alist;
+//    }
+    
+//    public static List<Pair> kvMerge(List<Pair> A, List<Pair> B, boolean isKeyInt){
+//        List<Pair> res=new ArrayList<Pair>();
+//        int ai=0;
+//        int bi=0;
+//        int asize=A.size();
+//        int bsize=B.size();
+//        while(ai<asize && bi<bsize){
+//            if(!isKeyInt){
+//                String akey=(String)(A.get(ai).name);
+//                String bkey=(String)(B.get(bi).name);
+//                if(akey.compareTo(bkey)>0){
+//                    res.add(B.get(bi));
+//                    bi++;
+//                } else {
+//                    res.add(A.get(ai));
+//                    ai++;
+//                }
+//            } else {
+//                int akey=(Integer)A.get(ai).name;
+//                int bkey=(Integer)B.get(bi).name;
+//                if(akey>bkey){
+//                    res.add(B.get(bi));
+//                    bi++;
+//                } else {
+//                    res.add(A.get(ai));
+//                    ai++;
+//                }
+//            }
+//        }
+//        if(ai==asize){
+//            while (bi<bsize){
+//                res.add(B.get(bi));
+//                bi++;
+//            }
+//        } else {
+//            while (ai<asize){
+//                res.add(A.get(ai));
+//                ai++;
+//            }
+//        }
+//        
+//        List<Pair> theRes = new ArrayList<Pair>();
+//        int ind=0;
+//        if(!isKeyInt){
+//            String tempString=(String)(res.get(0).name);
+//            List<String> theSet= new ArrayList<String>();
+//            theSet.add((String)(res.get(0).content));
+//            Pair thePair;
+//            ind++;
+//            while(ind<res.size()){
+//                if(tempString.equals((String)(res.get(ind).name))){
+//                    theSet.add((String)(res.get(ind).content));
+//                }else{
+//                    thePair = new Pair(tempString,theSet);
+//                    theRes.add(thePair);
+//                    tempString=(String)(res.get(ind).name);
+//                    theSet=new ArrayList<String>();
+//                    theSet.add((String)(res.get(ind).content));
+//                }
+//                ind++;
+//            }
+//            thePair = new Pair(tempString,theSet);
+//            theRes.add(thePair);
+//        } else {
+//            Integer tempInt=(Integer)(res.get(0).name);
+//            ArrayList<String> theSet= new ArrayList<String>();
+//            theSet.add((String)(res.get(0).content));
+//            Pair thePair;
+//            ind++;
+//            while(ind<res.size()){
+//                if(tempInt==(Integer)(res.get(ind).name)){
+//                    theSet.add((String)(res.get(ind).content));
+//                }else{
+//                    thePair = new Pair(tempInt,theSet);
+//                    theRes.add(thePair);
+//                    tempInt=(Integer)(res.get(ind).name);
+//                    theSet=new ArrayList<String>();
+//                    theSet.add((String)(res.get(ind).content));
+//                }
+//                ind++;
+//            }
+//            thePair = new Pair(tempInt,theSet);
+//            theRes.add(thePair);
+//        }
+//        
+//        return theRes;
+//    }
+	
 }

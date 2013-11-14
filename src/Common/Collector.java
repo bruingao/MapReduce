@@ -30,6 +30,7 @@ public class Collector {
     
     public void collect(Object key, Object value) {
     	Pair pair = new Pair(key, value);
+    	addkvPair(pair);
     }
     
     public void sortStringKey(){
@@ -59,5 +60,7 @@ public class Collector {
             }
         }
     }
+    
+    
 
 }

@@ -16,7 +16,8 @@ public final class dfsScheduler {
 	private static ConcurrentHashMap<String, HashSet<String>> nodeToReplicas
 		= new ConcurrentHashMap<String, HashSet<String>>();
 	
-	
+	private static ConcurrentHashMap<String, Integer> nodeToFileNum
+		= new ConcurrentHashMap<String, Integer>();
 
 	/* datanodes' status */
 	private static ConcurrentHashMap<String, Boolean> status 
@@ -82,7 +83,8 @@ public final class dfsScheduler {
 		int cnt = 0;
 				
 		for (String datanode : nodeToReplicas.keySet()) {
-			int size = nodeToReplicas.get(datanode).size();
+//			int size = nodeToReplicas.get(datanode).size();
+			int size = nodeToFileNum.get(datanode);
 			
 			if(nodes != null && nodes.contains(datanode) && (!status.get(datanode)))
 				continue;
@@ -106,9 +108,24 @@ public final class dfsScheduler {
 			}
 		}
 		
+		if(cnt >= num) {
+			for (String datanode : nodeToFileNum.keySet()) {
+				nodeToFileNum.put(datanode, nodeToFileNum.get(datanode)+1);
+			}
+		}
+		
 		return res;
 	}
 	
+	public static ConcurrentHashMap<String, Integer> getNodeToFileNum() {
+		return nodeToFileNum;
+	}
+
+	public static void setNodeToFileNum(
+			ConcurrentHashMap<String, Integer> nodeToFileNum) {
+		dfsScheduler.nodeToFileNum = nodeToFileNum;
+	}
+
 	/* choose most heavy nodes */
 	public static String[] chooseHeavy(int num , String[] nodes) {
 				
@@ -193,12 +210,15 @@ public final class dfsScheduler {
 		files.get(filename).get(chunknumber).add(node);
 		
 		nodeToReplicas.get(node).add(filename+chunknumber);
+		nodeToFileNum.put(node, nodeToFileNum.get(node)+1);
 	}
 	
 	public static void removeReplica (String filename, int chunknumber, String node) {
 		files.get(filename).get(chunknumber).remove(node);
 		
 		nodeToReplicas.get(node).remove(filename + chunknumber);
+		nodeToFileNum.put(node, nodeToFileNum.get(node)-1);
+
 	}
 	
 	public static void transferTemp(String filename) {
@@ -216,6 +236,12 @@ public final class dfsScheduler {
 	}
 	
 	public static void deleteTemp(String filename) {
+		for(int chunk : tempFiles.get(filename).keySet()) {
+			for (String node : tempFiles.get(filename).get(chunk)) {
+				nodeToFileNum.put(node, nodeToFileNum.get(node)-1);
+			}
+		}
+		
 		tempFiles.remove(filename);
 	}
 	

@@ -10,9 +10,10 @@ import Common.Pair;
 import Common.Util;
 
 public class JobClient {
-	private static JobConf jobconf;
 	
 	private static Registry registry;
+	
+	private static JobConf jobconf;
 	
 	private static String confPath = "conf/mapred.conf";
 		
@@ -32,6 +33,9 @@ public class JobClient {
 	private static Integer dataRegPort;
 	private static Integer jobRegPort;
 	private static Integer taskRegPort;
+	
+	/* maximum fail times */
+	private static Integer maxFailTimes;
 	
 	/* job id */
 	private static int jid;
@@ -60,10 +64,14 @@ public class JobClient {
 			System.exit(-1);
 		}
 		
+		String mapperName = conf.getMapperClass().getName().replace('.', '/');
+		String reducerName = conf.getReducerClass().getName().replace('.', '/');
+
+		
 		Pair mapper = new Pair(conf.getMapperClass().getName(), 
-				Util.readFromFile(conf.getMapperClass().getName()+".class"));
+				Util.readFromFile(mapperName+".class"));
 		Pair reducer = new Pair(conf.getReducerClass().getName(),
-				Util.readFromFile(conf.getReducerClass().getName()+ ".class"));
+				Util.readFromFile(reducerName+ ".class"));
 		String res = jobtracker.submitJob(conf, mapper, reducer);
 		
 		/* return the job id or some errors may occur */
@@ -73,9 +81,21 @@ public class JobClient {
 		} else if (res == "INPUTNOTFOUND") {
 			System.out.println("input file not found!");
 			System.exit(-1);
-		} else if (res == "FAIL") {
+		} 
+		
+		int failtimes = 0;
+		while (res == "FAIL") {
 			System.out.println("Job failed!");
-			System.exit(-1);
+			if (failtimes < maxFailTimes) {
+				System.out.println("job restarting!");
+				res = jobtracker.submitJob(conf, mapper, reducer);
+				failtimes++;
+				continue;
+			} else {
+				System.out.println("Job terminated!");
+				System.exit(-1);
+			}
+			
 		}
 		
 		jid = Integer.parseInt(res);
@@ -88,16 +108,29 @@ public class JobClient {
 			if(status == JOB_RESULT.INPROGRESS) {
 				double mp = jobtracker.checkMapper(jid);
 				double rp = jobtracker.checkReducer(jid);
-				System.out.printf("Mapper: %f; Reducer: %f\n", mp, rp);
+				System.out.printf("Mapper: %f percent; Reducer: %f percent\n", mp*100, rp*100);
 			} else if (status == JOB_RESULT.FAIL) {
 				System.out.println("job failed!");
-				break;
+				if(failtimes < maxFailTimes) {
+					failtimes++;
+					res = jobtracker.submitJob(conf, mapper, reducer);
+					if(res != "FAIL" && res != "OUTEXISTS" && res != "INPUTNOTFOUND")
+						jid = Integer.parseInt(res);
+					continue;
+				} else {
+					System.out.println("job terminated!");
+					break;
+				}
 			} else if (status == JOB_RESULT.SUCCESS) {
-				System.out.println("job succeed!");
+				System.out.println("job succeed! You can check your output files use the name format: " +
+						"[jobid]-[outputfilename]-part-[partition number]");
+				
+				System.out.println("Your jobid is "+jid + ", and your outputfile name is "+conf.getOutputfile());
+				jobtracker.terminateJob(jid);
 				break;
 			}
 			try {
-				Thread.sleep(2000);
+				Thread.sleep(5000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 				System.out.println("Exception happened when monitoring!");

@@ -25,7 +25,7 @@ public class MRManager {
 	private static String nameNodeServiceName;
 	
 	/* registry hostname read from configuration file */
-	private static String registryHostname;
+	private static String nameNodeHostname;
 	
 	/* registry port number read from configuration file */
 	private static Integer nameRegPort;
@@ -43,7 +43,7 @@ public class MRManager {
 		Registry registry;
 		NameNodeI namenode = null;
 		
-		registry = LocateRegistry.getRegistry(registryHostname, nameRegPort);
+		registry = LocateRegistry.getRegistry(nameNodeHostname, nameRegPort);
 		//namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
 		namenode = (NameNodeI)registry.lookup(nameNodeServiceName);
 		

@@ -7,6 +7,7 @@ import java.util.Map.Entry;
 import Common.Pair;
 
 import mapred.JobTracker.JOB_RESULT;
+import mapred.JobTracker.NOTIFY_RESULT;
 
 public interface JobTrackerI extends Remote{
 	public String submitJob(JobConf conf, Pair mapper, Pair reducer) throws RemoteException;
@@ -17,6 +18,9 @@ public interface JobTrackerI extends Remote{
 	public Pair readMapper(Integer jid) throws RemoteException;
 	public Pair readReducer(Integer jid) throws RemoteException;
 	
-	public void notifyMapResult(boolean res, int jid, String tnode) throws RemoteException;
+	public void notifyMapResult(NOTIFY_RESULT res, int jid, String tnode) throws RemoteException;
 	
+	public void notifyReduceResult(NOTIFY_RESULT res, int jid, String tnode, int partition) throws RemoteException;
+	
+	public void terminateJob(int jid) throws RemoteException;
 }

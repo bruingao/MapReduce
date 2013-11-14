@@ -36,7 +36,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	private static String nameNodeServiceName;
 	
 	/* registry hostname read from configuration file */
-	private static String registryHostname;
+	private static String nameNodeHostname;
 	
 	/* registry port number read from configuration file */
 	private static Integer nameRegPort;
@@ -74,6 +74,10 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 		obj = Util.readObject(nameNodePath+"tempfiles");
 		if (obj != null)
 			dfsScheduler.setTempFiles((ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>>) obj);
+		
+		obj = Util.readObject(nameNodePath+"filenumber");
+		if(obj != null)
+			dfsScheduler.setNodeToFileNum((ConcurrentHashMap<String, Integer>) obj);
 	}
 	
 	
@@ -120,6 +124,9 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 				if (cnt < replicaFactor) {
 					String res[] = dfsScheduler.chooseLight(replicaFactor - cnt, candidates);
 					
+					if(candidates.size()==0)
+						break;
+					
 					for (String r : res) {
 						if(r == null)
 							break;
@@ -143,9 +150,11 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 		
 		HashMap<Integer, HashSet<String>> res = dfsScheduler.createFile(filename, num, replicaFactor);
 		
-		if (res.size() > 0 && res != null)
+		if (res.size() > 0 && res != null) {
 			/* check point */
 			Util.writeObject(nameNodePath + "tempfiles", dfsScheduler.getTempFiles());
+			Util.writeObject(nameNodePath + "filenumber", dfsScheduler.getNodeToFileNum());
+		}
 		
 		return res;
 	}
@@ -181,10 +190,11 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 		for(int i = 0; i < lines.length; i++) {
 			dfsScheduler.getStatus().put(lines[i], false);
 			dfsScheduler.getNodeToReplicas().put(lines[i], new HashSet<String>());
+			dfsScheduler.getNodeToFileNum().put(lines[i], 0);
 		}
 	}
 	
-	public void checkTimer() {
+	private void checkTimer() {
 		Timer check = new Timer();
 		check.scheduleAtFixedRate (new TimerTask(){
 			
@@ -242,6 +252,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 		
 		Util.writeObject(nameNodePath+"files", dfsScheduler.getFiles());
 		Util.writeObject(nameNodePath + "nodeToReplicas", dfsScheduler.getNodeToReplicas());
+		Util.writeObject(nameNodePath + "filenumber", dfsScheduler.getNodeToFileNum());
 	}
     /*
     @Override	

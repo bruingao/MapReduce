@@ -33,13 +33,16 @@ public class MapRunner {
 	public static void main(String[] args) {
 		/* mapper classname, jobid, num of partitions, partitionPath, numOfChunks, inputfile, chunks, datanodeHost, regPort, datanode service name */
 		
+		for(int i = 0;i <args.length;i++)
+			System.out.println(args[i]);
+		
 		String mapperName = args[0];
 		
-		int jid = Integer.parseInt(args[1]);
+		int numPartitions = Integer.parseInt(args[1]);
 		
-		int numPartitions = Integer.parseInt(args[2]);
+		String partitionPath = args[2];
 		
-		String partitionPath = args[3];
+		int jid = Integer.parseInt(args[3]);				
 				
 		int numOfChunks = Integer.parseInt(args[4]);
 		
@@ -55,12 +58,17 @@ public class MapRunner {
 			i++;
 		}
 		
+		
+		System.out.println("phase 1:succeed!");
+		
 		try {
 			Class<Mapper> ma = (Class<Mapper>) Class.forName(mapperName);
 		
 			Constructor<Mapper> cma = ma.getConstructor();
 			
 			mapper = cma.newInstance();
+			
+			System.out.println("phase 2:succeed!");
 			
 			String content[] = new String[numOfChunks];
 			
@@ -69,34 +77,36 @@ public class MapRunner {
 			
 			Collector collector = new Collector();
 			
-			for (int ck : chunks) {
-				String datanodeHost = args[7 + numOfChunks];
-				
-				int regPort = Integer.parseInt(args[8 + numOfChunks]);
-				
-				String service = args[9 + numOfChunks];
-				
-				
-					Registry reg = LocateRegistry.getRegistry(datanodeHost, regPort);
-					DataNodeI datanode = (DataNodeI)reg.lookup(service);
-					content[c] = new String(datanode.read(filename+ck),"UTF-8");
-					
-					/* produce key pair */
-					Class<inputFormatAbs> iFormat = (Class<inputFormatAbs>) Class.forName(inputformat);
-					Constructor<inputFormatAbs> constuctor = iFormat.getConstructor(String.class);
-					
-					inputFormatAbs iformat = constuctor.newInstance(content[c]);
-					
-					List<Pair> pairs = iformat.getkvPairs();
-					
-					for(Pair pair : pairs) {
-						mapper.map(pair.name, pair.content, collector);
-					}
-			}
+			int regPort = Integer.parseInt(args[7 + numOfChunks*2]);
+			String service = args[8 + numOfChunks * 2];			
 			
+			for (int ck : chunks) {
+				String datanodeHost = args[7 + numOfChunks + c];				
+				System.out.println("datanodeHostname: "+datanodeHost);
+				System.out.println("service name: "+service);
+				Registry reg = LocateRegistry.getRegistry(datanodeHost, regPort);
+				DataNodeI datanode = (DataNodeI)reg.lookup(service);
+				content[c] = new String(datanode.read(filename+ck),"UTF-8");
+				
+				/* produce key pair */
+				Class<inputFormatAbs> iFormat = (Class<inputFormatAbs>) Class.forName(inputformat);
+				Constructor<inputFormatAbs> constuctor = iFormat.getConstructor(String.class);
+				
+				inputFormatAbs iformat = constuctor.newInstance(content[c]);
+				
+				List<Pair> pairs = iformat.getkvPairs();
+				
+				for(Pair pair : pairs) {
+					mapper.map(pair.name, pair.content, collector);
+				}
+				c++;
+			}
+						
 			collector.sortStringKey();
 			
 			String pContents[] = Partitioner.partition(collector.collection,collector.uniqueKeys, numPartitions);
+			
+			//System.out.println(pContents.length);
 			
 			/* partition */
 			String partitions[] = new String[numPartitions];
@@ -104,17 +114,20 @@ public class MapRunner {
 			for(i = 0; i < numPartitions; i++) {
 				partitions[i] = jid+"partition"+i+suffix;
 				
+				//System.out.println(pContents[i]);
 				Util.writeBinaryToFile(pContents[i].getBytes("UTF-8"), partitionPath+"/"+partitions[i]);
 				
-//				System.out.println(partitions[i]);
+				//System.out.println(partitions[i]);
 			}
+			
+			System.out.println("phase 4:succeed!");
 			
 		} catch (RemoteException e) {
 			e.printStackTrace();
-			System.exit(-1);
+			System.exit(-2);
 		} catch (NotBoundException e) {
 			e.printStackTrace();
-			System.exit(-1);
+			System.exit(-2);
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 			System.exit(-1);
@@ -144,4 +157,6 @@ public class MapRunner {
 		
 		
 	}
+	
+	
 }

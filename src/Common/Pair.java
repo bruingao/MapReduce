@@ -14,4 +14,9 @@ public class Pair implements Serializable{
 		name = n;
 		content = c;
 	}
+	
+	@Override
+	public boolean equals(Object e) {
+		return name.equals(((Pair)e).name) && content.equals(((Pair)e).content);
+	}
 }

@@ -7,9 +7,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.Date;
 import java.util.HashSet;
-import java.util.Random;
 
 import Common.Util;
 
@@ -39,7 +37,7 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 	/* all the files' path */
 	private static String dataNodePath;
 		
-	private static String registryHostname;
+	private static String nameNodeHostname;
 	
 	private static Integer nameRegPort;
 	private static Integer dataRegPort;
@@ -131,10 +129,11 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 	@Override
 	public boolean replication(String filename, String[] nodes)
 			throws RemoteException {
-		Date date = new Date();
-		Random rand = new Random(date.getTime());
 		
-		int index = rand.nextInt()%nodes.length;
+		if(nodes.length <= 0)
+			return false;
+		
+		int index = 0;
 		
 		try {
 		

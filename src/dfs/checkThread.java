@@ -103,8 +103,15 @@ public class checkThread implements Runnable{
 			int cnt = 0;
 			
 			for(String n : nodes) {
+				if(n == dnode)
+					continue;
+				
 				temp[cnt] = n;
 				cnt++;
+			}
+			
+			if(cnt <= 0) {
+				return;
 			}
 			
 			boolean res = datanode.replication(filename + chunknumber, temp);
