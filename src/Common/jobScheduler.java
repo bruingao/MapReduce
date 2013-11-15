@@ -235,7 +235,7 @@ public final class jobScheduler {
 		
 		/* now choose the optimal node to handle the job */
 		String opNode = chooseBestNode(nodeStatus.keySet(), nodeToNumTasks);
-		
+				
 		/* what chunk does this failed node has */
 		HashMap<Integer, String> failChunk = jobToMappers.get(jid).get(tnode);
 		
@@ -246,6 +246,10 @@ public final class jobScheduler {
 		
 		nodeToMapJobs.get(tnode).remove(jid);
 
+		jobToMappers.get(jid).remove(tnode);
+		
+		if(opNode ==null)
+			return null;
 		
 		/* if chunks != null, it means this error is caused by datanode failure 
 		 * so we need rechoose the datanode */
@@ -268,9 +272,7 @@ public final class jobScheduler {
 			opChunk = failChunk;
 		else
 			opChunk.putAll(failChunk);
-		
-		jobToMappers.get(jid).remove(tnode);
-		
+				
 		jobToMappers.get(jid).put(opNode, opChunk);
 		
 //		nodeToNumTasks.put(opNode, nodeToNumTasks.get(opNode) + 1);
@@ -291,6 +293,9 @@ public final class jobScheduler {
 		nodeToReduceJobs.get(tnode).remove(new Pair(jid, partition));
 		
 		String opNode = chooseBestNode(nodeStatus.keySet(), nodeToNumTasks);
+		
+		if(opNode == null)
+			return null;
 		
 		nodeToReduceJobs.get(opNode).add(new Pair(jid,partition));
 		

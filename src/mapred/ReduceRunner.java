@@ -98,6 +98,8 @@ public class ReduceRunner {
 				
 				contents[i] = tasktracker.getInterFiles(jid, partition);
 				
+				System.out.println("content file "+i+": "+contents[i]);
+				
 				/* if read error return -1, reducer fail */
 				if(contents[i] == null)
 					System.exit(-1);

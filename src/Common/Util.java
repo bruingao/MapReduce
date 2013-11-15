@@ -332,11 +332,15 @@ public final class Util {
 	public static ArrayList<Pair> parseStr(String orderedContent) {
 		ArrayList<Pair> res = new ArrayList<Pair>();
 		
+		System.out.println(orderedContent);
+		
 		String lines[] = orderedContent.split("\n");
 		
 		ArrayList<String> l = new ArrayList<String>();
+		System.out.println(lines[0]);
         String[] kv=lines[0].split(" ");
 		l.add(kv[1]);
+		System.out.println(kv[0]+" "+kv[1]);
 		res.add(new Pair(kv[0], l));
 		
 		int index = 0;
@@ -345,7 +349,7 @@ public final class Util {
             kv=lines[i].split(" ");
             String temp = (String) res.get(index).name;
             
-            if(kv[0] == temp) {
+            if(kv[0].equals(temp)) {
             	((ArrayList<String>)res.get(index).content).add(kv[1]);
             } else {
             	l = new ArrayList<String>();
@@ -355,6 +359,8 @@ public final class Util {
             }
             
 		}
+		
+		System.out.println("list size: "+res.size());
 		
 		return res;
 	}

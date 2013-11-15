@@ -129,6 +129,9 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 	/* the job's current status fail or normal */
 	private static ConcurrentHashMap<Integer, Boolean> jobStatus
 		= new ConcurrentHashMap<Integer, Boolean>();
+	
+	private static ConcurrentHashMap<Integer, Boolean> jobMapperFinished
+		= new ConcurrentHashMap<Integer, Boolean>();
 		
 	private void checkNode() {
 		for (String node : jobScheduler.nodeStatus.keySet()){
@@ -147,6 +150,12 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 					Pair newNode = jobScheduler.mapperFail(jid, node, null);
 					/* new task tracker */
 					String opNode = (String) newNode.name;
+					
+					if(opNode == null) {
+						jobStatus.put(jid, false);
+						continue;
+					}
+					
 					/* failed chunks and corresponding datanode */
 					HashMap<Integer, String> failChunk = (HashMap<Integer, String>) newNode.content;
 					
@@ -165,6 +174,11 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 					HashSet<String> mapperTrackers = new HashSet<String>(jobScheduler.jobToMappers.get(jid).keySet());
 
 					String newNode = jobScheduler.reducerFail(jid, node, partition);
+					
+					if(newNode == null) {
+						jobStatus.put(jid, false);
+						continue;
+					}
 					
 					/* push reducer task */
 					jobThread t = new jobThread(newNode, jid, confs.get(jid), 
@@ -284,6 +298,7 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 		}
 		
 		jobStatus.put(jid, true);
+		jobMapperFinished.put(jid, false);
 		
 		return jid.toString();
 	}
@@ -340,35 +355,40 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 		if (res == NOTIFY_RESULT.SUCCESS) {
 			jobScheduler.mapperSucceed(jid, tnode);
 			
-			if (checkMapper(jid) >= 1.0) {
-				/* should not remove mappers's information 
-				 * in case of jobtracker failure in the process 
-				 * of retrieving intermediate data by reducers */
-//				mappers.remove(jid);
-//				mappername.remove(jid);
-				/* start reducers */
-				ArrayList<String> dreducers = jobScheduler.decideReducers(jid, numOfPartitions);
-				
-				/* if there are problems when choosing the reduce tasktrackers */
-				if (reducers == null) {
-					jobStatus.put(jid, false);
+			synchronized(jobMapperFinished.get(jid)){
+				if (jobMapperFinished.get(jid))
 					return;
-				}
-				/* push reduce tasks to decided task trackers */
-				else {
-					HashSet<String> mapperTrackers = new HashSet<String>( jobScheduler.jobToMappers.get(jid).keySet());
-					/* for every partition choose a corresponding reducer to do the work */
-					for (int i = 0; i <numOfPartitions; i++) {
-						/* get all the map task trackers of this job */
-						System.out.println("choose reduce task tracker:" + dreducers.get(i));
-						
-						/* push reducer task */
-						jobThread t = new jobThread(dreducers.get(i), jid, confs.get(jid), 
-								null, mapperTrackers, false, i);
-						
-						executor.execute(t);
-						
+				if (checkMapper(jid) >= 1.0) {
+					/* should not remove mappers's information 
+					 * in case of jobtracker failure in the process 
+					 * of retrieving intermediate data by reducers */
+	//				mappers.remove(jid);
+	//				mappername.remove(jid);
+					/* start reducers */
+					ArrayList<String> dreducers = jobScheduler.decideReducers(jid, numOfPartitions);
+					
+					/* if there are problems when choosing the reduce tasktrackers */
+					if (dreducers == null) {
+						jobStatus.put(jid, false);
+						return;
 					}
+					/* push reduce tasks to decided task trackers */
+					else {
+						HashSet<String> mapperTrackers = new HashSet<String>( jobScheduler.jobToMappers.get(jid).keySet());
+						/* for every partition choose a corresponding reducer to do the work */
+						for (int i = 0; i <numOfPartitions; i++) {
+							/* get all the map task trackers of this job */
+							System.out.println("choose reduce task tracker:" + dreducers.get(i));
+							
+							/* push reducer task */
+							jobThread t = new jobThread(dreducers.get(i), jid, confs.get(jid), 
+									null, mapperTrackers, false, i);
+							
+							executor.execute(t);
+							
+						}
+					}
+					jobMapperFinished.put(jid, true);
 				}
 			}
 		} else {
@@ -385,6 +405,12 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 				
 				/* choose a new task tracker and extract the failed chunks */
 				Pair newNode = jobScheduler.mapperFail(jid, tnode,chunks);
+				
+				if(newNode == null) {
+					jobStatus.put(jid, false);
+					return;
+				}
+				
 				/* new task tracker */
 				String opNode = (String) newNode.name;
 				/* failed chunks and corresponding datanode */
@@ -427,6 +453,11 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 
 			String newNode = jobScheduler.reducerFail(jid, tnode, partition);
 			
+			if(newNode == null) {
+				jobStatus.put(jid, false);
+				return;
+			}
+			
 			Registry reg = LocateRegistry.getRegistry(newNode, taskRegPort);
 			
 			TaskTrackerI tasktracker = null;
@@ -437,7 +468,7 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 			}
 			tasktracker.pushReduceTask(jid, confs.get(jid), mapperTrackers, partition);
 		} else if (res == NOTIFY_RESULT.TASKNODE_FAIL) {
-			
+			jobStatus.put(jid, false);
 		}
 	}
 	

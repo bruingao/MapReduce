@@ -302,12 +302,16 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 		
 		for(String[] path : filePath) {
 			try {
-				res.concat(new String(Util.readFromFile(interFilePath + "/" + path[partition]), "UTF-8"));
+				System.out.println("filepath: " + interFilePath + "/"+path[partition]);
+				String temp = new String(Util.readFromFile(interFilePath + "/" + path[partition]), "UTF-8");
+				res += temp;
 			} catch (UnsupportedEncodingException e) {
 				e.printStackTrace();
 				return null;
 			}
 		}
+		
+		System.out.println("getinterfiles: "+res);
 		
 		return res;
 		
