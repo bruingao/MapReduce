@@ -5,9 +5,8 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Set;
+import java.util.Hashtable;
 
 public class jobThread implements Runnable{
 	
@@ -16,7 +15,7 @@ public class jobThread implements Runnable{
 	private JobConf conf;
 	
 	/* what map task need. file chunks and corresponding nodes */
-	private HashMap<Integer, String> chunks;
+	private Hashtable<Integer, String> chunks;
 	
 	/* reduce task needs this. 
 	 * Means that where the intermediate file reside on */
@@ -30,7 +29,7 @@ public class jobThread implements Runnable{
 	private int whichPartition;
 		
 	public jobThread(String node, int jid, JobConf conf,
-			HashMap<Integer, String> chunks, HashSet<String> interNodes, boolean flag, int wp) {
+			Hashtable<Integer, String> chunks, HashSet<String> interNodes, boolean flag, int wp) {
 		super();
 		this.node = node;
 		this.jid = jid;

@@ -16,8 +16,14 @@ import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
  * Util is a utility class for our program. It compute the hash code of a givin method.
@@ -329,74 +335,103 @@ public final class Util {
 
 	}
 	
-	public static ArrayList<Pair> parseStr(String orderedContent) {
-		ArrayList<Pair> res = new ArrayList<Pair>();
+	public static HashMap<String, ArrayList<String>> parseStr(String orderedContent) {
+//		ArrayList<Pair> res = new ArrayList<Pair>();
 		
-		System.out.println(orderedContent);
+		//System.out.println(orderedContent);
 		
 		String lines[] = orderedContent.split("\n");
 		
-		ArrayList<String> l = new ArrayList<String>();
-		System.out.println(lines[0]);
-        String[] kv=lines[0].split(" ");
-		l.add(kv[1]);
-		System.out.println(kv[0]+" "+kv[1]);
-		res.add(new Pair(kv[0], l));
+		HashMap<String, ArrayList<String>> table = new HashMap<String, ArrayList<String>>();
 		
-		int index = 0;
-		
-		for (int i = 1;i < lines.length; i++) {
-            kv=lines[i].split(" ");
-            String temp = (String) res.get(index).name;
-            
-            if(kv[0].equals(temp)) {
-            	((ArrayList<String>)res.get(index).content).add(kv[1]);
-            } else {
-            	l = new ArrayList<String>();
-        		l.add(kv[1]);
-        		res.add(new Pair(kv[0], l));
-        		index++;
-            }
-            
+		for(String line : lines) {
+			String p[] = line.split(" ");
+			if(p.length < 2)
+				continue;
+			ArrayList<String> temp = table.get(p[0]);
+			if(temp == null)
+				temp = new ArrayList<String>();
+			temp.add(p[1]);
+			table.put(p[0], temp);
 		}
 		
-		System.out.println("list size: "+res.size());
+//		ArrayList<String> l = new ArrayList<String>();
+//		System.out.println(lines[0]);
+//        String[] kv=lines[0].split(" ");
+//		l.add(kv[1]);
+//		System.out.println(kv[0]+" "+kv[1]);
+//		res.add(new Pair(kv[0], l));
+//		
+//		int index = 0;
+//		
+//		for (int i = 1;i < lines.length; i++) {
+//            kv=lines[i].split(" ");
+//            String temp = (String) res.get(index).name;
+//            
+//            if(kv[0].equals(temp)) {
+//            	((ArrayList<String>)res.get(index).content).add(kv[1]);
+//            } else {
+//            	l = new ArrayList<String>();
+//        		l.add(kv[1]);
+//        		res.add(new Pair(kv[0], l));
+//        		index++;
+//            }
+//            
+//		}
+//		
+//		System.out.println("list size: "+res.size());
 		
-		return res;
+		return table;
 	}
 	
-	public static ArrayList<Pair> mergeArray(ArrayList<Pair> p1, ArrayList<Pair> p2) {
-		ArrayList<Pair> res = new ArrayList<Pair>();
+	public static HashMap<String, ArrayList<String>> mergeArray
+		(HashMap<String, ArrayList<String>> p1, HashMap<String, ArrayList<String>> p2) {
+//		ArrayList<Pair> res = new ArrayList<Pair>();
+//		
+//		int i = 0;
+//		int j = 0;
+//		
+//		while (i < p1.size() && j < p2.size()) {
+//			if(((String) p1.get(i).name).compareTo((String)p2.get(j).name) < 0) {
+//				res.add(p1.get(i));
+//				i++;
+//			} else if (((String) p1.get(i).name).compareTo((String)p2.get(j).name) > 0) {
+//				res.add(p2.get(j));
+//				j++;
+//			} else {
+//				((ArrayList<String>)p1.get(i).content).addAll((ArrayList<String>)p2.get(j).content);
+//				res.add(p1.get(i));
+//				i++;
+//				j++;
+//			}
+//		}
+//		
+//		while (i < p1.size()) {
+//			res.add(p1.get(i));
+//			i++;
+//		}
+//		
+//		while (j < p2.size()) {
+//			res.add(p2.get(j));
+//			j++;
+//		}
 		
-		int i = 0;
-		int j = 0;
-		
-		while (i < p1.size() && j < p2.size()) {
-			if(((String) p1.get(i).name).compareTo((String)p2.get(j).name) < 0) {
-				res.add(p1.get(i));
-				i++;
-			} else if (((String) p1.get(i).name).compareTo((String)p2.get(j).name) > 0) {
-				res.add(p2.get(j));
-				j++;
-			} else {
-				((ArrayList<String>)p1.get(i).content).addAll((ArrayList<String>)p2.get(j).content);
-				res.add(p1.get(i));
-				i++;
-				j++;
+		for(String key2 : p2.keySet()) {
+			if(p1.containsKey(key2)) {
+				p1.get(key2).addAll(p2.get(key2));
+			}
+			else {
+				p1.put(key2, p2.get(key2));
 			}
 		}
 		
-		while (i < p1.size()) {
-			res.add(p1.get(i));
-			i++;
+		return p1;
+	}
+	
+	public static void checkpointFiles(String filename, Object obj) {
+		synchronized(obj){
+			Util.writeObject(filename, obj);
 		}
-		
-		while (j < p2.size()) {
-			res.add(p2.get(j));
-			j++;
-		}
-		
-		return res;
 	}
 	
 	

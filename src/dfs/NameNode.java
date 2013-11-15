@@ -6,7 +6,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashSet;
-import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
@@ -56,6 +56,9 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	
 	public static Registry registry;
 	
+
+	
+	
 	private static ExecutorService executor = Executors.newCachedThreadPool();
 	
 	public NameNode() throws RemoteException{
@@ -65,7 +68,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 		/* read checkpoint */
 		Object obj = Util.readObject(nameNodePath+"files");
 		if (obj != null)
-			dfsScheduler.setFiles((ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>>) obj);
+			dfsScheduler.setFiles((ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>>) obj);
 		
 		obj = Util.readObject(nameNodePath+"nodeToReplicas");
 		if (obj != null)
@@ -73,7 +76,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 		
 		obj = Util.readObject(nameNodePath+"tempfiles");
 		if (obj != null)
-			dfsScheduler.setTempFiles((ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>>) obj);
+			dfsScheduler.setTempFiles((ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>>) obj);
 		
 		obj = Util.readObject(nameNodePath+"filenumber");
 		if(obj != null)
@@ -81,8 +84,8 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	}
 	
 	
-	/* delete a file */
-	public void deleteFile(){}
+//	/* delete a file */
+//	public void deleteFile(){}
 	
 	/* check data nodes */
 	public void checkDataNodes(){
@@ -96,7 +99,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	/* check file replication */
 	public void checkreplication() {
 		for (String name : dfsScheduler.getFiles().keySet()) {
-			HashMap<Integer, HashSet<String>> map = dfsScheduler.getFiles().get(name);
+			Hashtable<Integer, HashSet<String>> map = dfsScheduler.getFiles().get(name);
 			for (Integer i : map.keySet()) {
 				int cnt  = 0;
 				HashSet<String> candidates = new HashSet<String>();
@@ -145,22 +148,24 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	
 	/* add a new file */	
 	@Override
-	public HashMap<Integer, HashSet<String>> writeFile(String filename, int num)
+	public Hashtable<Integer, HashSet<String>> writeFile(String filename, int num)
 			throws RemoteException {
 		
-		HashMap<Integer, HashSet<String>> res = dfsScheduler.createFile(filename, num, replicaFactor);
+		Hashtable<Integer, HashSet<String>> res = dfsScheduler.createFile(filename, num, replicaFactor);
 		
 		if (res.size() > 0 && res != null) {
 			/* check point */
-			Util.writeObject(nameNodePath + "tempfiles", dfsScheduler.getTempFiles());
-			Util.writeObject(nameNodePath + "filenumber", dfsScheduler.getNodeToFileNum());
+			Util.checkpointFiles(nameNodePath+"tempfiles", dfsScheduler.getNodeToReplicas());
+			Util.checkpointFiles(nameNodePath + "filenumber", dfsScheduler.getNodeToFileNum());
+//			Util.writeObject(nameNodePath + "tempfiles", dfsScheduler.getTempFiles());
+//			Util.writeObject(nameNodePath + "filenumber", dfsScheduler.getNodeToFileNum());
 		}
 		
 		return res;
 	}
 
 	@Override
-	public HashMap<Integer, HashSet<String>> open(String filename)
+	public Hashtable<Integer, HashSet<String>> open(String filename)
 			throws RemoteException {
 
 		/* TaskTacker call this method to get the files' relica places */
@@ -171,15 +176,18 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	public void writeSucess(String filename, boolean res) throws RemoteException {
 		if(res) {
 			dfsScheduler.transferTemp(filename);
-			Util.writeObject(NameNode.nameNodePath+"files", dfsScheduler.getFiles());
-			Util.writeObject(NameNode.nameNodePath + "nodeToReplicas", dfsScheduler.getNodeToReplicas());
+			Util.checkpointFiles(nameNodePath+"files", dfsScheduler.getFiles());
+			Util.checkpointFiles(nameNodePath+"nodeToReplicas", dfsScheduler.getNodeToReplicas());
+//			Util.writeObject(NameNode.nameNodePath+"files", dfsScheduler.getFiles());
+//			Util.writeObject(NameNode.nameNodePath + "nodeToReplicas", dfsScheduler.getNodeToReplicas());
 		}
 		else {
 			dfsScheduler.deleteTemp(filename);
 		}
 		
 		/* check point */
-		Util.writeObject(NameNode.nameNodePath+"tempfiles", dfsScheduler.getTempFiles());
+		Util.checkpointFiles(nameNodePath+"tempfiles", dfsScheduler.getTempFiles());
+//		Util.writeObject(NameNode.nameNodePath+"tempfiles", dfsScheduler.getTempFiles());
 	}
 	
 	public static void readDataNodes(String filename) throws UnsupportedEncodingException {
@@ -215,7 +223,11 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 			 			 
 			 readDataNodes(dnPath);
 			 server.Init();
-
+			 
+			 if(!nameNodePath.endsWith("/")) {
+				 nameNodePath += "/";
+			 }
+			 
 			 unexportObject(server, false);
 			 NameNodeI stub = (NameNodeI) exportObject(server, nameNodePort);
 			 
@@ -236,7 +248,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	}
 
 	@Override
-	public ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>> listFiles() throws RemoteException {
+	public ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>> listFiles() throws RemoteException {
 		return dfsScheduler.getFiles();
 	}
 
@@ -250,23 +262,11 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
 	public void removeFile(String filename) throws RemoteException {
 		dfsScheduler.removeFile(filename);		
 		
-		Util.writeObject(nameNodePath+"files", dfsScheduler.getFiles());
-		Util.writeObject(nameNodePath + "nodeToReplicas", dfsScheduler.getNodeToReplicas());
-		Util.writeObject(nameNodePath + "filenumber", dfsScheduler.getNodeToFileNum());
+		Util.checkpointFiles(nameNodePath+"files", dfsScheduler.getFiles());
+		Util.checkpointFiles(nameNodePath+"nodeToReplicas", dfsScheduler.getNodeToReplicas());
+		Util.checkpointFiles(nameNodePath + "filenumber", dfsScheduler.getNodeToFileNum());
+
 	}
-    /*
-    @Override	
-	public void proxyRebind(String dataNodeServiceName, DataNodeI datanode) throws RemoteException {
-	    try
-	    {
-            registry.rebind(dataNodeServiceName, datanode);
-        }
-        catch (Exception e)
-	    {
-	    	e.printStackTrace();
-	    }
-	}
-	*/
 
 	@Override
 	public boolean checkname(String filename) throws RemoteException {

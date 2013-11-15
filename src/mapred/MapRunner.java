@@ -7,6 +7,7 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
@@ -50,7 +51,7 @@ public class MapRunner {
 		
 		String inputformat = args[6];
 		
-		HashSet<Integer> chunks = new HashSet<Integer>();
+		ArrayList<Integer> chunks = new ArrayList<Integer>();
 		
 		int i = 0;
 		while (i < numOfChunks) {
@@ -86,7 +87,7 @@ public class MapRunner {
 				System.out.println("service name: "+service);
 				Registry reg = LocateRegistry.getRegistry(datanodeHost, regPort);
 				DataNodeI datanode = (DataNodeI)reg.lookup(service);
-				content[c] = new String(datanode.read(filename+ck),"UTF-8");
+				content[c] = new String(datanode.read(filename+"-"+ck),"UTF-8");
 				
 				/* produce key pair */
 				Class<inputFormatAbs> iFormat = (Class<inputFormatAbs>) Class.forName(inputformat);
@@ -102,20 +103,20 @@ public class MapRunner {
 				c++;
 			}
 						
-			collector.sortStringKey();
+			//collector.sortStringKey();
 			
-			String pContents[] = Partitioner.partition(collector.collection,collector.uniqueKeys, numPartitions);
+			StringBuffer pContents[] = Partitioner.partition(collector.collection,collector.uniqueKeys, numPartitions);
 			
 			//System.out.println(pContents.length);
 			
 			/* partition */
 			String partitions[] = new String[numPartitions];
-			String suffix = "-" + chunks.toArray()[0].toString();
+			String suffix = "-" + chunks.get(0);
 			for(i = 0; i < numPartitions; i++) {
 				partitions[i] = jid+"partition"+i+suffix;
 				
 				//System.out.println(pContents[i]);
-				Util.writeBinaryToFile(pContents[i].getBytes("UTF-8"), partitionPath+"/"+partitions[i]);
+				Util.writeBinaryToFile(pContents[i].toString().getBytes("UTF-8"), partitionPath+partitions[i]);
 				
 				//System.out.println(partitions[i]);
 			}
@@ -124,35 +125,14 @@ public class MapRunner {
 			
 		} catch (RemoteException e) {
 			e.printStackTrace();
-			System.exit(-2);
+			System.exit(2);
 		} catch (NotBoundException e) {
 			e.printStackTrace();
-			System.exit(-2);
-		} catch (UnsupportedEncodingException e) {
+			System.exit(2);
+		} catch (Exception e) {
 			e.printStackTrace();
-			System.exit(-1);
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (NoSuchMethodException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (SecurityException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (InstantiationException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		}
+			System.exit(1);
+		} 
 
 		
 		

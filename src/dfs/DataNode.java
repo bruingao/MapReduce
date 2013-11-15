@@ -100,7 +100,8 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		add_ts(files,filename);
 		
 		/* check point */
-		Util.writeObject(dataNodePath + "files", files);
+		Util.checkpointFiles(dataNodePath + "files", files);
+//		Util.writeObject(dataNodePath + "files", files);
 	}
 	
 	@Override
@@ -109,7 +110,9 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 		remove_ts(files,filename);
 		
 		/* check point */
-		Util.writeObject(dataNodePath + "files", files);
+		Util.checkpointFiles(dataNodePath + "files", files);
+
+//		Util.writeObject(dataNodePath + "files", files);
 	}
 
 	public static void readDataNodes(String filename) throws UnsupportedEncodingException {
@@ -157,7 +160,11 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
 			 Util.readConfigurationFile(confPath, datanode);
 			 readDataNodes(dnPath);
 			 datanode.Init();
-
+			 
+			 if(!dataNodePath.endsWith("/")) {
+				 dataNodePath += "/";
+			 }
+			 
 			 unexportObject(datanode, false);
 			 DataNodeI stub = (DataNodeI) exportObject(datanode, dataNodePort);
 			 

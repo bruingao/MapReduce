@@ -14,13 +14,15 @@ public class outputFormat extends inputFormatAbs{
         return kvPairs;
     }
   
-    public String getOutput() {
-        content=new String();
+    public StringBuffer getOutput() {
+    	StringBuffer sb=new StringBuffer("");
         for (int i=0;i<kvPairs.size();i++){
-            content=content+kvPairs.get(i).name+" ";
-            content=content+kvPairs.get(i).content+"\n";
+        	sb.append(kvPairs.get(i).name);
+        	sb.append(" ");
+        	sb.append(kvPairs.get(i).content);
+        	sb.append("\n");
         }
-        return content;
+        return sb;
     }
     
 }

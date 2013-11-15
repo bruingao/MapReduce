@@ -10,7 +10,9 @@ import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.HashSet;
+import java.util.SortedMap;
 
 import dfs.DataNodeI;
 import dfs.NameNodeI;
@@ -98,21 +100,28 @@ public class ReduceRunner {
 				
 				contents[i] = tasktracker.getInterFiles(jid, partition);
 				
-				System.out.println("content file "+i+": "+contents[i]);
+//				System.out.println("content file "+i+": "+contents[i]);
 				
 				/* if read error return -1, reducer fail */
 				if(contents[i] == null)
 					System.exit(-1);
 			}
 			
-			ArrayList<ArrayList<Pair>> kvPairs = new ArrayList<ArrayList<Pair>>();
+			ArrayList<HashMap<String, ArrayList<String>>> kvPairs 
+				= new ArrayList<HashMap<String, ArrayList<String>>>();
 			
 			/* do reduce job */
 			for (String content : contents) {
+				if(content.equals("") || content == null)
+					continue;
 				kvPairs.add(Util.parseStr(content));
 			}
 			
-			ArrayList<ArrayList<Pair>> newPairs = new ArrayList<ArrayList<Pair>>();
+			if(kvPairs.size() == 0)
+				return;
+			
+			ArrayList<HashMap<String, ArrayList<String>>> newPairs 
+			= new ArrayList<HashMap<String, ArrayList<String>>>();
 			while (kvPairs.size()>1) {
 				int i;
 				for(i = 0;i*2+1 < kvPairs.size(); i++) {
@@ -122,54 +131,36 @@ public class ReduceRunner {
 					newPairs.add(kvPairs.get(i*2));
 				}
 				kvPairs = newPairs;
-				newPairs = new ArrayList<ArrayList<Pair>>();
+				newPairs = new ArrayList<HashMap<String, ArrayList<String>>>();
 			}
 			
-			ArrayList<Pair> values = kvPairs.get(0);
+			HashMap<String, ArrayList<String>> values = kvPairs.get(0);
 			
-			for(int i = 0;i<values.size();i++) {
-				reducer.reduce((String)values.get(i).name, (ArrayList<String>)values.get(i).content, collector);
+			for(String key : values.keySet()) {
+				reducer.reduce(key, values.get(key), collector);
 			}
 			
 			
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (NoSuchMethodException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (SecurityException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (InstantiationException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-			System.exit(-1);
 		} catch (RemoteException e) {
 			e.printStackTrace();
-			System.exit(-2);
+			System.exit(2);
 		} catch (NotBoundException e) {
 			e.printStackTrace();
-			System.exit(-2);
-		}
+			System.exit(2);
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.exit(1);
+		} 
 		
 		/* transform the computed partition to a string, ready to write to dfs */
 		outputFormat output = new outputFormat(collector.collection);
 		
 		byte[] result = null;
 		try {
-			result = output.getOutput().getBytes("UTF-8");
+			result = output.getOutput().toString().getBytes("UTF-8");
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
-			System.exit(-1);
+			System.exit(1);
 		}
 		
 		ArrayList<Integer> range = new ArrayList<Integer>();
@@ -179,7 +170,7 @@ public class ReduceRunner {
 		String newName = jid + "-" + outputFilename+"part-"+partition;
 		
 		/* open name node */
-		HashMap<Integer, HashSet<String>> newFile = null;
+		Hashtable<Integer, HashSet<String>> newFile = null;
 		NameNodeI namenode = null;
 		
 		try {
@@ -190,20 +181,20 @@ public class ReduceRunner {
 			if (newFile == null) {
 				System.out.println("The filename " +newName+ " is taken!Please choose another name!");
 				namenode.writeSucess(newName, false);
-				System.exit(-1);
+				System.exit(1);
 			}
 			
 			if (newFile.size() == 0) {
 				System.out.println("There is no enough nodes for storing the data!");
 				namenode.writeSucess(newName, false);
-				System.exit(-1);;
+				System.exit(1);
 			}
 		} catch (RemoteException e) {
 			e.printStackTrace();
-			System.exit(-1);
+			System.exit(1);
 		} catch (NotBoundException e) {
 			e.printStackTrace();
-			System.exit(-1);
+			System.exit(1);
 		}
 		
 		for(int chunk : newFile.keySet()) {
@@ -213,7 +204,7 @@ public class ReduceRunner {
 				try {
 					dreg = LocateRegistry.getRegistry(dnode, dataRegPort);
 					DataNodeI datanodeI = (DataNodeI)dreg.lookup(dataService);
-					datanodeI.write(newName+chunk, Arrays.copyOfRange(result, range.get(chunk), range.get(chunk+1)));
+					datanodeI.write(newName+"-"+chunk, Arrays.copyOfRange(result, range.get(chunk), range.get(chunk+1)));
 					count++;
 				} catch (RemoteException e) {
 					e.printStackTrace();
@@ -226,9 +217,9 @@ public class ReduceRunner {
 					namenode.writeSucess(newName, false);
 				} catch (RemoteException e) {
 					e.printStackTrace();
-					System.exit(-1);
+					System.exit(1);
 				}
-				System.exit(-1);
+				System.exit(1);
 			}
 		}
 		
@@ -236,7 +227,7 @@ public class ReduceRunner {
 			namenode.writeSucess(newName, true);
 		} catch (RemoteException e) {
 			e.printStackTrace();
-			System.exit(-1);
+			System.exit(1);
 		}
 		
 	}

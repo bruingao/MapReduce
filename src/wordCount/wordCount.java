@@ -10,7 +10,7 @@ import mapred.JobConf;
 public class wordCount {
 	public static void main(String[] args) {
 		JobConf conf = new JobConf();
-		conf.setInputfile("input1");
+		conf.setInputfile("input");
 		conf.setOutputfile("output.txt");
 		conf.setInputFormat(inputFormatLine.class);
 		conf.setOutputFormat(outputFormat.class);

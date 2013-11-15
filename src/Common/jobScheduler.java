@@ -1,8 +1,9 @@
 package Common;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -53,8 +54,8 @@ public final class jobScheduler {
 		= new ConcurrentHashMap<Integer, Integer>();
 	
 	/* job To mapper taskTrackers(Machine's address) and corresponding chunks */
-	public static ConcurrentHashMap<Integer, HashMap<String, HashMap<Integer, String>>> jobToMappers
-		= new ConcurrentHashMap<Integer, HashMap<String, HashMap<Integer, String>>>();
+	public static ConcurrentHashMap<Integer, Hashtable<String, Hashtable<Integer, String>>> jobToMappers
+		= new ConcurrentHashMap<Integer, Hashtable<String, Hashtable<Integer, String>>>();
 	
 	/* number of reducers */
 	private static ConcurrentHashMap<Integer, Integer> numReducers
@@ -86,18 +87,16 @@ public final class jobScheduler {
 		return (uncompletedReducers.get(jid) == 0) && (uncompletedMappers.get(jid) == 0);
 	}
 	
-	public static HashMap<String,HashMap<Integer, String>> decideMappers(HashMap<Integer, HashSet<String>> filechunks, int jid) {
+	public static Hashtable<String,Hashtable<Integer, String>> decideMappers(Hashtable<Integer, HashSet<String>> filechunks, int jid) {
 		/* check every filechunk's replication nodes and choose the one with fewest mappers running.
 		 */
 		
-		HashMap<String,HashMap<Integer, String>> nodeTochunks = new HashMap<String, HashMap<Integer, String>>();
+		Hashtable<String,Hashtable<Integer, String>> nodeTochunks = new Hashtable<String, Hashtable<Integer, String>>();
 		
 		for (int chunk : filechunks.keySet()) {
 			HashSet<String> nodes = filechunks.get(chunk);
 			/* choose among those nodes which have the file chunk */
 			String opNode = chooseBestNode(nodes, nodeToNumTasks);
-			nodeToNumTasks.put(opNode, nodeToNumTasks.get(opNode)-1);
-			double point1 = -100;
 			
 			if(nodes == null) {
 				System.out.println("cannot find opNode");
@@ -108,6 +107,9 @@ public final class jobScheduler {
 				System.out.println("opNode null");
 				return null;
 			}
+			
+			nodeToNumTasks.put(opNode, nodeToNumTasks.get(opNode)-1);
+			double point1 = -100;
 			
 			if(nodeToNumTasks.get(opNode)!=null)
 				point1 = JobTracker.localBonus 
@@ -130,9 +132,9 @@ public final class jobScheduler {
 			/* compare their points and obtain the best one */
 			opNode2 = point1 >= point2? opNode:opNode2;
 			
-			HashMap<Integer, String> chunks = nodeTochunks.get(opNode);
+			Hashtable<Integer, String> chunks = nodeTochunks.get(opNode);
 			if(chunks == null)
-				chunks = new HashMap<Integer, String>();
+				chunks = new Hashtable<Integer, String>();
 			
 			nodeToNumTasks.put(opNode2, nodeToNumTasks.get(opNode2)+1);
 			chunks.put(chunk, opNode);
@@ -173,6 +175,7 @@ public final class jobScheduler {
 //						nodeToNumTasks.put(nodes.get(j), nodeToNumTasks.get(nodes.get(j))-1);
 //					}
 //				}
+				System.out.println("reducer null");
 				return null;
 			}
 			nodes.add(opNode);
@@ -229,7 +232,7 @@ public final class jobScheduler {
 		uncompletedReducers.put(jid, uncompletedReducers.get(jid)-1);
 	}
 	
-	public static Pair mapperFail(int jid, String tnode, HashMap<Integer,HashSet<String>> chunks) {
+	public static Pair mapperFail(int jid, String tnode, Hashtable<Integer,HashSet<String>> chunks) {
 		/* set the failed node status to false */
 		nodeStatus.put(tnode, false);
 		
@@ -237,7 +240,7 @@ public final class jobScheduler {
 		String opNode = chooseBestNode(nodeStatus.keySet(), nodeToNumTasks);
 				
 		/* what chunk does this failed node has */
-		HashMap<Integer, String> failChunk = jobToMappers.get(jid).get(tnode);
+		Hashtable<Integer, String> failChunk = jobToMappers.get(jid).get(tnode);
 		
 //		int chunksize = failChunk.size();
 //		
@@ -266,7 +269,7 @@ public final class jobScheduler {
 		}
 		
 		/* what chunk does this optimal node has */
-		HashMap<Integer, String> opChunk = jobToMappers.get(jid).get(opNode);
+		Hashtable<Integer, String> opChunk = jobToMappers.get(jid).get(opNode);
 		
 		if (opChunk == null)
 			opChunk = failChunk;
@@ -339,11 +342,15 @@ public final class jobScheduler {
 		}
 		
 		for (String node : nodeToReduceJobs.keySet()) {
+			HashSet<Pair> toBeRemoved = new HashSet<Pair>();
 			for (Pair pair : nodeToReduceJobs.get(node)) {
 				if (jid == (int)pair.name) {
-					nodeToReduceJobs.get(node).remove(pair);
+					toBeRemoved.add(pair);
 				}
-			}			
+			}	
+			for(Pair pair : toBeRemoved) {
+				nodeToReduceJobs.get(node).remove(pair);
+			}
 		}
 		
 		numMappers.remove(jid);

@@ -7,7 +7,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -51,7 +51,7 @@ public class MRManager {
 		
 		switch(cmd) {
 			case "listfile":
-				ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>> files = namenode.listFiles();
+				ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>> files = namenode.listFiles();
 				for(String file : files.keySet()) {
 					System.out.println(file+":");
 					for (int chunk : files.get(file).keySet()) {
@@ -80,8 +80,13 @@ public class MRManager {
 		        }
 		        String theFilename = cmds[2];
 		        
-		        ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>> theFiles = namenode.listFiles();
-		        HashMap<Integer, HashSet<String>> filechunks = theFiles.get(theFilename);
+//		        ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>> theFiles = namenode.listFiles();
+		        Hashtable<Integer, HashSet<String>> filechunks = namenode.open(theFilename);
+//		        Hashtable<Integer, HashSet<String>> filechunks = theFiles.get(theFilename);
+		        if(filechunks == null) {
+		        	System.out.println("The file does not exist!");
+		        	break;
+		        }
 		        SortedSet<Integer> chunkNums = new TreeSet<Integer>(filechunks.keySet());
 		        
 		        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
@@ -89,7 +94,7 @@ public class MRManager {
 		            String dnode=filechunks.get(chunknum).iterator().next();
 		            registry = LocateRegistry.getRegistry(dnode, dataRegPort);
 					DataNodeI datanodeI = (DataNodeI)registry.lookup(dataNodeServiceName);
-					byte[] chunkContent = datanodeI.read(theFilename+chunknum);
+					byte[] chunkContent = datanodeI.read(theFilename+"-"+chunknum);
 					byteStream.write(chunkContent);
 		        }
                 byte[] fileContent=byteStream.toByteArray();
@@ -113,33 +118,11 @@ public class MRManager {
 					
 				int size = content.length;
 				
-				/* real chunk size similar to chunksize but round to avoid partial line in a chunk */
-				
-//				int chunknumber = 0;
-//				
-//				int basis = chunksize;
-				
-				ArrayList<Integer> range = new ArrayList<Integer>();
-				
-//				range.add(0);
-//				
-//				while(size >= basis) {
-//					chunknumber++;
-//					while (content[basis] != '\n') {
-//						basis--;
-//					}
-//					range.add(basis+1);
-//					basis += chunksize;
-//				}
-//				
-//				if(basis != size) {
-//					chunknumber++;
-//					range.add(basis+1);
-//				}
+				ArrayList<Integer> range = new ArrayList<Integer>();	
 				
 				int chunknumber = Util.decideChunkNumber(size, chunksize, range, content);
 				
-				HashMap<Integer,HashSet<String>> res 
+				Hashtable<Integer,HashSet<String>> res 
 					= namenode.writeFile(filename, chunknumber);
 				
 				if (res == null) {
@@ -159,7 +142,7 @@ public class MRManager {
 					
 					    registry = LocateRegistry.getRegistry(dnode, dataRegPort);
 						DataNodeI datanodeI = (DataNodeI)registry.lookup(dataNodeServiceName);
-						datanodeI.write(filename+chunk, Arrays.copyOfRange(content, range.get(chunk), range.get(chunk+1)));
+						datanodeI.write(filename+"-"+chunk, Arrays.copyOfRange(content, range.get(chunk), range.get(chunk+1)));
 					}
 				}
 				
@@ -175,7 +158,7 @@ public class MRManager {
 				
 				String fname = cmds[2];
 				
-				HashMap<Integer, HashSet<String>> file
+				Hashtable<Integer, HashSet<String>> file
 					= namenode.open(fname);
 				
 				if (file == null) {
@@ -187,7 +170,7 @@ public class MRManager {
 					for (String dnode : file.get(chunk)){
 					    registry = LocateRegistry.getRegistry(dnode, dataRegPort);
 						DataNodeI datanodeI = (DataNodeI)registry.lookup(dataNodeServiceName);
-						datanodeI.removeFile(fname + chunk);
+						datanodeI.removeFile(fname + "-" +chunk);
 					}
 				}
 				

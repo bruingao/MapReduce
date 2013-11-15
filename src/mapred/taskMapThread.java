@@ -7,7 +7,6 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 
 import Common.Util;
 
@@ -110,7 +109,7 @@ public class taskMapThread implements Runnable{
 			if(TaskTracker.jobToIncompleteMapper.get(jid) != null) {
 				/* process response and exit status */
 				if(exitStatus != 0) {
-					if (exitStatus == -1)
+					if (exitStatus == 1)
 						jobtracker.notifyMapResult(JobTracker.NOTIFY_RESULT.FAIL,
 								jid, TaskTracker.hostAddress);
 					else
@@ -129,7 +128,7 @@ public class taskMapThread implements Runnable{
 						temp = new HashSet<String[]>();
 					
 					String partitions[] = new String[numPartitions];
-					String suffix = "-" + chunks.toArray()[0].toString();
+					String suffix = "-" + chunks.get(0);
 					for(int i = 0; i < numPartitions; i++) {
 						partitions[i] = jid+"partition"+i+suffix;
 												

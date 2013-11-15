@@ -2,7 +2,6 @@ package mapred;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.util.Map.Entry;
 
 import Common.Pair;
 

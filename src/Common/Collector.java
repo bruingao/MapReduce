@@ -2,8 +2,6 @@ package Common;
 
 import java.util.*;
 
-import format.inputFormatAbs;
-
 public class Collector {
 
     
@@ -43,7 +41,7 @@ public class Collector {
     
     public class stringKeyComparator implements Comparator<Pair> {
         public int compare(Pair kvPair1, Pair kvPair2) {
-            if (((String) kvPair1.name).compareTo((String) kvPair2.name)>0){
+            if (((String) kvPair1.name).hashCode() > ((String) kvPair2.name).hashCode()){
                 return 1;
             } else {
                 return -1;

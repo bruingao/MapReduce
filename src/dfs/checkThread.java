@@ -114,13 +114,13 @@ public class checkThread implements Runnable{
 				return;
 			}
 			
-			boolean res = datanode.replication(filename + chunknumber, temp);
+			boolean res = datanode.replication(filename + "-" + chunknumber, temp);
 			
 			if (res) {
 				dfsScheduler.replication(filename, chunknumber, dnode);
 				/* checkpoint */
-				Util.writeObject(NameNode.nameNodePath+"files", dfsScheduler.getFiles());
-				Util.writeObject(NameNode.nameNodePath+"nodeToReplicas", dfsScheduler.getNodeToReplicas());
+				Util.checkpointFiles(NameNode.nameNodePath + "files", dfsScheduler.getFiles());
+				Util.checkpointFiles(NameNode.nameNodePath+"nodeToReplicas", dfsScheduler.getNodeToReplicas());
 			}
 			
 		} catch (Exception e) {
@@ -142,12 +142,12 @@ public class checkThread implements Runnable{
 		try {
 		    Registry dnRegistry=LocateRegistry.getRegistry(dnode,registryPort);
 			DataNodeI datanode = (DataNodeI) dnRegistry.lookup(serviceName);
-			datanode.removeFile(filename + chunknumber);
+			datanode.removeFile(filename + "-" + chunknumber);
 			
 			dfsScheduler.removeReplica(filename, chunknumber, dnode);
 			/* checkpoint */
-			Util.writeObject(NameNode.nameNodePath+"files", dfsScheduler.getFiles());
-			Util.writeObject(NameNode.nameNodePath+"nodeToReplicas", dfsScheduler.getNodeToReplicas());
+			Util.checkpointFiles(NameNode.nameNodePath+"files", dfsScheduler.getFiles());
+			Util.checkpointFiles(NameNode.nameNodePath+"nodeToReplicas", dfsScheduler.getNodeToReplicas());
 
 		} catch (Exception e) {
 			if (e instanceof java.rmi.NotBoundException) {

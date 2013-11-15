@@ -9,7 +9,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -147,15 +147,15 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	@SuppressWarnings("unused")
 	@Override
 	public void pushMapTask(int jid, JobConf conf, 
-			HashMap<Integer, String> chunks) throws RemoteException {
+			Hashtable<Integer, String> chunks) throws RemoteException {
 		
 		System.out.println("chunk number:"+chunks.size());
 		
 		/* distributed chunks */
 		int cnt = 0;
 		int num = 0;
-		HashMap<Integer, ArrayList<Integer>> pcks = new HashMap<Integer, ArrayList<Integer>>();
-		HashMap<Integer, ArrayList<String>> dnodes = new HashMap<Integer, ArrayList<String>>();
+		Hashtable<Integer, ArrayList<Integer>> pcks = new Hashtable<Integer, ArrayList<Integer>>();
+		Hashtable<Integer, ArrayList<String>> dnodes = new Hashtable<Integer, ArrayList<String>>();
 		ArrayList<Integer> cks = null;
 		ArrayList<String> nodes = null;
 		for (int c : chunks.keySet()) {
@@ -263,6 +263,14 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 			 Util.readConfigurationFile(confPath, tasktracker);
 			 Util.readConfigurationFile(dfsPath, tasktracker);
 			 			 
+			 if(!sysFilePath.endsWith("/")) {
+				 sysFilePath += "/";
+			 }
+			 
+			 if(!interFilePath.endsWith("/")) {
+				 interFilePath += "/";
+			 }
+			 
 			 unexportObject(tasktracker, false);
 			 TaskTrackerI stub = (TaskTrackerI) exportObject(tasktracker, taskPort);
 			 
@@ -298,22 +306,22 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 		if (filePath == null)
 			return null;
 		
-		String res = "";
+		StringBuffer res = new StringBuffer("");
 		
 		for(String[] path : filePath) {
 			try {
-				System.out.println("filepath: " + interFilePath + "/"+path[partition]);
-				String temp = new String(Util.readFromFile(interFilePath + "/" + path[partition]), "UTF-8");
-				res += temp;
+				System.out.println("filepath: " + interFilePath +path[partition]);
+				String temp = new String(Util.readFromFile(interFilePath + path[partition]), "UTF-8");
+				res.append(temp);
 			} catch (UnsupportedEncodingException e) {
 				e.printStackTrace();
 				return null;
 			}
 		}
 		
-		System.out.println("getinterfiles: "+res);
+		//System.out.println("getinterfiles: "+res);
 		
-		return res;
+		return res.toString();
 		
 	}
 	
@@ -346,16 +354,20 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 					System.out.println("reducer "+jid+" partition " + partition + " succeed!");
 					jobtracker.notifyReduceResult(JobTracker.NOTIFY_RESULT.SUCCESS, jid, hostAddress, partition);
 					break;
-				case -1:
+				case 1:
 					/* job fail due to other reasons(datanode write failure or application error) */
 					System.out.println("reducer "+jid+" partition " + partition + " failed!");
 					jobtracker.notifyReduceResult(JobTracker.NOTIFY_RESULT.FAIL, jid, hostAddress, partition);
 					break;
-				case -2:
+				case 2:
 					/* job fail due to nodes having intermediate file fail(need to restart mapper) */
 					System.out.println("reducer "+jid+" partition " + partition + " failed due to task tracker failure!");
-					jobtracker.notifyReduceResult(JobTracker.NOTIFY_RESULT.FAIL, jid, hostAddress, partition);
+					jobtracker.notifyReduceResult(JobTracker.NOTIFY_RESULT.TASKNODE_FAIL, jid, hostAddress, partition);
 					break;
+				default:
+					System.out.println("reducer "+jid+" partition " + partition + " failed!");
+					jobtracker.notifyReduceResult(JobTracker.NOTIFY_RESULT.FAIL, jid, hostAddress, partition);
+					break;	
 			}
 			
 		} catch (InterruptedException e) {

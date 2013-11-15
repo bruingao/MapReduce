@@ -1,16 +1,14 @@
 package Common;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.Hashtable;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class dfsScheduler {
 	
 	/* filename to chunks, chunk number to its datanodes which it resides on */
-	private static ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>> files
-		= new ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>>();
+	private static ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>> files
+		= new ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>>();
 
 	/* which files reside on this datanode */
 	private static ConcurrentHashMap<String, HashSet<String>> nodeToReplicas
@@ -24,12 +22,12 @@ public final class dfsScheduler {
 		= new ConcurrentHashMap<String, Boolean>();
 
 	/* temp files (need to be veried whether write success, cannot be accessed) */
-	private static ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>> tempFiles
-		= new ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>>();
+	private static ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>> tempFiles
+		= new ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>>();
 	
 	
 	public static void setFiles(
-			ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>> files) {
+			ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>> files) {
 		dfsScheduler.files = files;
 	}
 
@@ -43,17 +41,17 @@ public final class dfsScheduler {
 	}
 
 	public static void setTempFiles(
-			ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>> tempFiles) {
+			ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>> tempFiles) {
 		dfsScheduler.tempFiles = tempFiles;
 	}
 
 	private dfsScheduler(){}
 	
-	public static ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>> getFiles() {
+	public static ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>> getFiles() {
 		return files;
 	}
 
-	public static ConcurrentHashMap<String, HashMap<Integer, HashSet<String>>> getTempFiles() {
+	public static ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>> getTempFiles() {
 		return tempFiles;
 	}
 	
@@ -66,7 +64,7 @@ public final class dfsScheduler {
 	}
 	
 	/* get the file's information */
-	public static HashMap<Integer, HashSet<String>> getFile(String filename) {
+	public static Hashtable<Integer, HashSet<String>> getFile(String filename) {
 		return files.get(filename);
 	}
 	
@@ -166,9 +164,15 @@ public final class dfsScheduler {
 	}
 	
 	/* get a file's corresponding information */
-	public static HashMap<Integer, HashSet<String>> openFile(String filename) {
-		HashMap<Integer, HashSet<String>> res = 
-				(HashMap<Integer, HashSet<String>>) dfsScheduler.getFile(filename).clone();
+	public static Hashtable<Integer, HashSet<String>> openFile(String filename) {
+		
+		Hashtable<Integer, HashSet<String>> temp = dfsScheduler.getFile(filename);
+		
+		if(temp == null)
+			return null;
+		
+		Hashtable<Integer, HashSet<String>> res = 
+				new Hashtable<Integer, HashSet<String>> ();
 		
 		for (int chunk : res.keySet()) {
 			for (String node :res.get(chunk)) {
@@ -183,11 +187,11 @@ public final class dfsScheduler {
 	
 	
 	/* create new file entry, stored in tempfile table */
-	public static HashMap<Integer, HashSet<String>> createFile(String filename, int chunks, int replicas) {
+	public static Hashtable<Integer, HashSet<String>> createFile(String filename, int chunks, int replicas) {
 		if(checkname(filename))
 			return null;
 				
-		HashMap<Integer, HashSet<String>> res = new HashMap<Integer, HashSet<String>>();
+		Hashtable<Integer, HashSet<String>> res = new Hashtable<Integer, HashSet<String>>();
 		
 		for(int i = 0; i < chunks; i++) {
 			String set[] = chooseLight(replicas, null);
@@ -196,7 +200,7 @@ public final class dfsScheduler {
 				if(set[j] != null)
 					temp.add(set[j]);
 				else 
-					return new HashMap<Integer, HashSet<String>>();
+					return new Hashtable<Integer, HashSet<String>>();
 			}
 			res.put(i, temp);
 		}
@@ -223,7 +227,7 @@ public final class dfsScheduler {
 	
 	public static void transferTemp(String filename) {
 		
-		HashMap<Integer,HashSet<String>> res = tempFiles.remove(filename);
+		Hashtable<Integer,HashSet<String>> res = tempFiles.remove(filename);
 		
 		files.put(filename, res);
 		

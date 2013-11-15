@@ -75,16 +75,13 @@ public class JobClient {
 		String res = jobtracker.submitJob(conf, mapper, reducer);
 		
 		/* return the job id or some errors may occur */
-		if (res == "OUTEXISTS") {
-			System.out.println("output file name is taken!");
-			System.exit(-1);
-		} else if (res == "INPUTNOTFOUND") {
+		if (res.equals("INPUTNOTFOUND")) {
 			System.out.println("input file not found!");
 			System.exit(-1);
 		} 
 		
 		int failtimes = 0;
-		while (res == "FAIL") {
+		while (res.equals("FAIL")) {
 			System.out.println("Job failed!");
 			if (failtimes < maxFailTimes) {
 				System.out.println("job restarting!");
@@ -92,6 +89,7 @@ public class JobClient {
 				failtimes++;
 				continue;
 			} else {
+				jobtracker.terminateJob(jid);
 				System.out.println("Job terminated!");
 				System.exit(-1);
 			}
@@ -108,20 +106,23 @@ public class JobClient {
 			if(status == JOB_RESULT.INPROGRESS) {
 				double mp = jobtracker.checkMapper(jid);
 				double rp = jobtracker.checkReducer(jid);
-				System.out.printf("Mapper: %f percent; Reducer: %f percent\n", mp*100, rp*100);
+				System.out.printf("Mapper: %fpercent; Reducer: %fpercent\n", mp*100, rp*100);
 			} else if (status == JOB_RESULT.FAIL) {
 				System.out.println("job failed!");
 				if(failtimes < maxFailTimes) {
 					failtimes++;
 					res = jobtracker.submitJob(conf, mapper, reducer);
-					if(res != "FAIL" && res != "OUTEXISTS" && res != "INPUTNOTFOUND")
+					if(res.equals("FAIL") &&  res.equals("INPUTNOTFOUND"))
 						jid = Integer.parseInt(res);
 					continue;
 				} else {
+					jobtracker.terminateJob(jid);
 					System.out.println("job terminated!");
 					break;
 				}
 			} else if (status == JOB_RESULT.SUCCESS) {
+				System.out.printf("Mapper: 100percent; Reducer: 100percent\n");
+
 				System.out.println("job succeed! You can check your output files use the name format: " +
 						"[jobid]-[outputfilename]-part-[partition number]");
 				
