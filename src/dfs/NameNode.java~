@@ -333,15 +333,9 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
         Util.checkpointFiles(nameNodePath+"files", dfsScheduler.getFiles());
         Util.checkpointFiles(nameNodePath+"nodeToReplicas", dfsScheduler.getNodeToReplicas());
         Util.checkpointFiles(nameNodePath + "filenumber", dfsScheduler.getNodeToFileNum());
+
     }
 
-    /** 
-     * check if a file is in the DFS
-     * 
-     * @param filename      the name of the file to find
-     * @return              true if the file exists in DFS; false otherwise
-     * @since               1.0
-     */
     @Override
     public boolean checkname(String filename) throws RemoteException {
         // TODO Auto-generated method stub

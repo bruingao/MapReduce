@@ -194,11 +194,9 @@ public class checkThread implements Runnable{
         try {
             Registry dnRegistry=LocateRegistry.getRegistry(dnode,registryPort);
             DataNodeI datanode = (DataNodeI) dnRegistry.lookup(serviceName);
-            
-            /* delete a file chunk replica on the specified DataNode */
             datanode.removeFile(filename + "-" + chunknumber);
             
-            /* update the information on DFS scheduler */
+            /* delete a file chunk replica on the specified DataNode */
             dfsScheduler.removeReplica(filename, chunknumber, dnode);
             
             /* checkpoint */

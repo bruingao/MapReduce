@@ -121,6 +121,7 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
      */
     @Override
     public void write(String filename, byte[] content) {
+        
         String temp = dataNodePath + filename;
         System.out.println(content);
         System.out.println(temp);
@@ -130,43 +131,20 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
         add_ts(files,filename);
         /* check point */
         Util.checkpointFiles(dataNodePath + "files", files);
+//        Util.writeObject(dataNodePath + "files", files);
     }
     
-    /** 
-     * remove a local file chunk, and then update local information
-     * and  checkpoint
-     * 
-     * @param filename  the file name of the chunk to be removed
-     * @since           1.0
-     */
     @Override
     public void removeFile(String filename) throws RemoteException {
-    
-    	/* remove a local file chunk */
-        try{
-            File file = new File(dataNodePath+filename);
-            file.setWritable(true);
-            if(file.delete()){
-            
-            }else{
-                System.out.println("Delete operation is failed.");
-            }
-        }catch(Exception e){
-            e.printStackTrace();
-        }
-        
-        /* update local information */
+                
         remove_ts(files,filename);
+        
         /* check point */
         Util.checkpointFiles(dataNodePath + "files", files);
+
+//        Util.writeObject(dataNodePath + "files", files);
     }
 
-    /** 
-     * read the list of DataNode hostnames and store them
-     * 
-     * @param filename  the file name of DataNode list file
-     * @since           1.0
-     */
     public static void readDataNodes(String filename) throws UnsupportedEncodingException {
         String content = new String(Util.readFromFile(filename),"UTF-8");
         
@@ -176,31 +154,18 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
         }    
     }
     
-    /** 
-     * respond to status check from the NameNode
-     * 
-     * @return          true indicating DataNode is alive
-     * @since           1.0
-     */
     @Override
     public boolean heartBeat() {
         return true;
     }
     
-    /** 
-     * make a replica of the specified file chunk from one of the residing DataNodes,
-     * and write the replica on local DataNode
-     * 
-     * @param filename  the file name of the chunk to be replicated
-     * @param nodes     the residing nodes
-     * @return          true if success, false otherwise
-     * @since           1.0
-     */
     @Override
     public boolean replication(String filename, String[] nodes)
             throws RemoteException {
+        
         if(nodes.length <= 0)
             return false;
+        
         int index = 0;
         
         try {
@@ -217,14 +182,6 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
         }
     }
     
-    /** 
-     * The main function on the DataNode. It reads the configuration file
-     * and DataNode list, recovers from local checkpoint, creates a local 
-     * RMI registry and binds the DataNode on the registry as a service.
-     * 
-     * @param args      no arguments needed, parameters can be written in the configuration file
-     * @since           1.0
-     */
     public static void main(String args[]) {
         
         try
@@ -240,14 +197,26 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
              
              unexportObject(datanode, false);
              DataNodeI stub = (DataNodeI) exportObject(datanode, dataNodePort);
+             
+             //registry = LocateRegistry.getRegistry(registryHostname, registryPort);
              registry = LocateRegistry.createRegistry(dataRegPort);
+             //NameNodeI namenode = (NameNodeI)registry.lookup(registryHostname+"/"+nameNodeServiceName);
+             
              InetAddress address = InetAddress.getLocalHost();
+             
              System.out.println(address.getHostAddress());
+             
              registry.rebind(dataNodeServiceName, stub);
+             
+             //System.out.println(dataNodeServiceName);
+             //registry.rebind(dataNodeServiceName, stub);
+             
+             //System.out.println ("DataNode ready!");
         }
         catch (Exception e)
         {
             e.printStackTrace();
+
             System.out.println("Exception happend when running the Datanode!");
         }
         
