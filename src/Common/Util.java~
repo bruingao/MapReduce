@@ -26,7 +26,9 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 /**
- * Util is a utility class for our program. It compute the hash code of a givin method.
+ * Util is a utility class for our program. It provide variaty of 
+ * functionalities, like lower-level local I/O, parsing, merging, 
+ * and some other calculations.
  * 
  * @author      Rui Zhang
  * @author      Jing Gao
@@ -110,6 +112,13 @@ public final class Util {
 		return content;
 	}
 	
+	/** 
+     * write byte array to local file
+     *
+     * @param content   the byte array of content to be written
+     * @param filename  the destination file name
+     * @since           1.0
+     */
 	public static void writeBinaryToFile(byte[] content, String filename) {
 		File newfile = new File(filename);
 		if(!newfile.exists()) {
@@ -139,7 +148,14 @@ public final class Util {
 		
 	}
 	
-	
+	/** 
+     * parsing a string with given delimiter
+     *
+     * @param String    the string to be parsed
+     * @param del       the delimiter
+     * @return			array of parsed strings
+     * @since           1.0
+     */
 	public static String[] parseLine(String line, String del) {
 		String res[] = new String[2];
 		int pos = line.lastIndexOf(del);
@@ -155,7 +171,14 @@ public final class Util {
 		
 	}
 	
-	
+	/** 
+     * read the configuration file line by line and fill in the variables 
+     * in the destination class
+     *
+     * @param filename  the file name of the configuration file
+     * @param obj       the object whose variables will be filled
+     * @since           1.0
+     */
 	public static void readConfigurationFile(String filename, Object obj) {
 		String content = null;
 		try {
@@ -198,6 +221,13 @@ public final class Util {
 		}
 	}
 	
+	/** 
+     * write object to file
+     *
+     * @param filename  the destination file name
+     * @param obj       the object to be written
+     * @since           1.0
+     */
 	public static void writeObject(String filename, Object obj) {
 		File newfile = new File(filename);
 		if(!newfile.exists()) {
@@ -229,6 +259,13 @@ public final class Util {
 		}
 	}
 	
+	/** 
+     * read object from file
+     *
+     * @param filename  the destination file name
+     * @return          the object read from the file
+     * @since           1.0
+     */
 	public static Object readObject(String filename) {
 		File newfile = new File(filename);
 		if(!newfile.exists()) {
@@ -247,14 +284,12 @@ public final class Util {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}finally {
 			try {
 				in.close();
 				iin.close();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
@@ -262,6 +297,13 @@ public final class Util {
 		return content;
 	}
 	
+	/** 
+     * convert file input stream to string
+     *
+     * @param is        file input stream
+     * @return          the string converted from input stream
+     * @since           1.0
+     */
 	public static String convertStreamToStr(InputStream is) throws IOException {
 		 
 		if (is != null) {
@@ -283,7 +325,18 @@ public final class Util {
 			return "";
 		}
 	}
-		 
+    
+    /** 
+     * compute the chunk number for a file with given size and chunk size,
+     * break on new lines to avoid cutting in half of a line
+     *
+     * @param filesize      the size of file in bytes
+     * @param chunksze      the desirable chunk size in bytes
+     * @param range         the returning list of locations of breaks
+     * @param content       the content of file
+     * @return              the chunk number computed
+     * @since           1.0
+     */
 	public static int decideChunkNumber (int filesize, int chunksize, ArrayList<Integer> range, byte[] content) {
 		
 		int chunknumber = 0;
@@ -312,6 +365,14 @@ public final class Util {
 		
 	}
 	
+	/** 
+     * build a new process from command line, used when generating
+     * mapper/reducer processes.
+     *
+     * @param cmd       the command line
+     * @return          process exit status
+     * @since           1.0
+     */
 	public static int buildProcess(String cmd) throws InterruptedException, IOException {
 		
 		List<String> commands = new ArrayList<String>();
@@ -335,11 +396,15 @@ public final class Util {
 
 	}
 	
+	/** 
+     * parse string of specific format to key values hash map.
+     *
+     * @param orderedContent    the string with ordered key value pairs
+     * @return                  the hash map of key and corresponding values
+     * @since                   1.0
+     */
 	public static HashMap<String, ArrayList<String>> parseStr(String orderedContent) {
-//		ArrayList<Pair> res = new ArrayList<Pair>();
-		
-		//System.out.println(orderedContent);
-		
+
 		String lines[] = orderedContent.split("\n");
 		
 		HashMap<String, ArrayList<String>> table = new HashMap<String, ArrayList<String>>();
@@ -354,67 +419,20 @@ public final class Util {
 			temp.add(p[1]);
 			table.put(p[0], temp);
 		}
-		
-//		ArrayList<String> l = new ArrayList<String>();
-//		System.out.println(lines[0]);
-//        String[] kv=lines[0].split(" ");
-//		l.add(kv[1]);
-//		System.out.println(kv[0]+" "+kv[1]);
-//		res.add(new Pair(kv[0], l));
-//		
-//		int index = 0;
-//		
-//		for (int i = 1;i < lines.length; i++) {
-//            kv=lines[i].split(" ");
-//            String temp = (String) res.get(index).name;
-//            
-//            if(kv[0].equals(temp)) {
-//            	((ArrayList<String>)res.get(index).content).add(kv[1]);
-//            } else {
-//            	l = new ArrayList<String>();
-//        		l.add(kv[1]);
-//        		res.add(new Pair(kv[0], l));
-//        		index++;
-//            }
-//            
-//		}
-//		
-//		System.out.println("list size: "+res.size());
-		
+
 		return table;
 	}
 	
+	/** 
+     * merge two hashmaps into one
+     *
+     * @param p1        the first hashmap to be merged
+     * @param p2        the second hashmap to be merged
+     * @return          the merged hashmap
+     * @since           1.0
+     */
 	public static HashMap<String, ArrayList<String>> mergeArray
 		(HashMap<String, ArrayList<String>> p1, HashMap<String, ArrayList<String>> p2) {
-//		ArrayList<Pair> res = new ArrayList<Pair>();
-//		
-//		int i = 0;
-//		int j = 0;
-//		
-//		while (i < p1.size() && j < p2.size()) {
-//			if(((String) p1.get(i).name).compareTo((String)p2.get(j).name) < 0) {
-//				res.add(p1.get(i));
-//				i++;
-//			} else if (((String) p1.get(i).name).compareTo((String)p2.get(j).name) > 0) {
-//				res.add(p2.get(j));
-//				j++;
-//			} else {
-//				((ArrayList<String>)p1.get(i).content).addAll((ArrayList<String>)p2.get(j).content);
-//				res.add(p1.get(i));
-//				i++;
-//				j++;
-//			}
-//		}
-//		
-//		while (i < p1.size()) {
-//			res.add(p1.get(i));
-//			i++;
-//		}
-//		
-//		while (j < p2.size()) {
-//			res.add(p2.get(j));
-//			j++;
-//		}
 		
 		for(String key2 : p2.keySet()) {
 			if(p1.containsKey(key2)) {
@@ -428,115 +446,17 @@ public final class Util {
 		return p1;
 	}
 	
+	/** 
+     * thread safely making checkpoints
+     *
+     * @param filename  checkpoint file name
+     * @param obj       the object to be written
+     * @since           1.0
+     */
 	public static void checkpointFiles(String filename, Object obj) {
 		synchronized(obj){
 			Util.writeObject(filename, obj);
 		}
 	}
-	
-	
-//    public static List<Pair> kvParse(String A, boolean isKeyInt) {
-//        List<Pair> alist=new ArrayList<Pair>();
-//        String[] parts=A.trim().split("\n");
-//        for (int i=0;i<parts.length;i++){
-//            String[] kv=parts[i].trim().split(" ");
-//            Pair akv;
-//            if (!isKeyInt){
-//                akv=new Pair(kv[0],kv[1]);
-//            } else {
-//                akv=new Pair(Integer.parseInt(kv[0]),kv[1]);
-//            }
-//            alist.add(akv);
-//        }
-//        return alist;
-//    }
-    
-//    public static List<Pair> kvMerge(List<Pair> A, List<Pair> B, boolean isKeyInt){
-//        List<Pair> res=new ArrayList<Pair>();
-//        int ai=0;
-//        int bi=0;
-//        int asize=A.size();
-//        int bsize=B.size();
-//        while(ai<asize && bi<bsize){
-//            if(!isKeyInt){
-//                String akey=(String)(A.get(ai).name);
-//                String bkey=(String)(B.get(bi).name);
-//                if(akey.compareTo(bkey)>0){
-//                    res.add(B.get(bi));
-//                    bi++;
-//                } else {
-//                    res.add(A.get(ai));
-//                    ai++;
-//                }
-//            } else {
-//                int akey=(Integer)A.get(ai).name;
-//                int bkey=(Integer)B.get(bi).name;
-//                if(akey>bkey){
-//                    res.add(B.get(bi));
-//                    bi++;
-//                } else {
-//                    res.add(A.get(ai));
-//                    ai++;
-//                }
-//            }
-//        }
-//        if(ai==asize){
-//            while (bi<bsize){
-//                res.add(B.get(bi));
-//                bi++;
-//            }
-//        } else {
-//            while (ai<asize){
-//                res.add(A.get(ai));
-//                ai++;
-//            }
-//        }
-//        
-//        List<Pair> theRes = new ArrayList<Pair>();
-//        int ind=0;
-//        if(!isKeyInt){
-//            String tempString=(String)(res.get(0).name);
-//            List<String> theSet= new ArrayList<String>();
-//            theSet.add((String)(res.get(0).content));
-//            Pair thePair;
-//            ind++;
-//            while(ind<res.size()){
-//                if(tempString.equals((String)(res.get(ind).name))){
-//                    theSet.add((String)(res.get(ind).content));
-//                }else{
-//                    thePair = new Pair(tempString,theSet);
-//                    theRes.add(thePair);
-//                    tempString=(String)(res.get(ind).name);
-//                    theSet=new ArrayList<String>();
-//                    theSet.add((String)(res.get(ind).content));
-//                }
-//                ind++;
-//            }
-//            thePair = new Pair(tempString,theSet);
-//            theRes.add(thePair);
-//        } else {
-//            Integer tempInt=(Integer)(res.get(0).name);
-//            ArrayList<String> theSet= new ArrayList<String>();
-//            theSet.add((String)(res.get(0).content));
-//            Pair thePair;
-//            ind++;
-//            while(ind<res.size()){
-//                if(tempInt==(Integer)(res.get(ind).name)){
-//                    theSet.add((String)(res.get(ind).content));
-//                }else{
-//                    thePair = new Pair(tempInt,theSet);
-//                    theRes.add(thePair);
-//                    tempInt=(Integer)(res.get(ind).name);
-//                    theSet=new ArrayList<String>();
-//                    theSet.add((String)(res.get(ind).content));
-//                }
-//                ind++;
-//            }
-//            thePair = new Pair(tempInt,theSet);
-//            theRes.add(thePair);
-//        }
-//        
-//        return theRes;
-//    }
 	
 }

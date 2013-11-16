@@ -628,6 +628,14 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 		jobStatus.remove(jid);
 	}
 	
+	
+	/** 
+     * the main function of JobTracker, read configuration files,
+     * register itself as service in local RMI registry, then
+     * periodically check the status of TaskTrackers.
+     * 
+     * @since           1.0
+     */ 
 	public static void main(String[] args) {
 		try
 	    {
@@ -667,7 +675,13 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 	    	System.out.println("Exception happend when running the JobTracker!");
 	    }
 	}
-
+    
+    /** 
+     * terminate a job
+     * 
+     * @param jid       job id
+     * @since           1.0
+     */ 
 	@Override
 	public void terminateJob(int jid) throws RemoteException {
 		removeAll(jid);

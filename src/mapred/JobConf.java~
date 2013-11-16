@@ -2,6 +2,17 @@ package mapred;
 
 import java.io.Serializable;
 
+
+/**
+ * JobConf is the configurator open to application programmers.
+ * Programmers can set configurations for their jobs with this
+ * class
+ *
+ * @author      Rui Zhang
+ * @author      Jing Gao
+ * @version     1.0, 11/12/2013
+ * @since       1.0
+ */
 public class JobConf implements Serializable{
 	
 	private static final long serialVersionUID = 870609109352931265L;

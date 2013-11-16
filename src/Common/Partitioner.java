@@ -34,16 +34,16 @@ public final class Partitioner {
      */
     public static StringBuffer[] partition(List<Pair> collection, HashSet<Object> uniqueKeys, Integer partitionNum){
         
-    	System.out.println("begin partition");
-    	
-    	HashMap<Object, Object> keyHashcode=new HashMap<Object,Object>();
+        System.out.println("begin partition");
+        
+        HashMap<Object, Object> keyHashcode=new HashMap<Object,Object>();
         StringBuffer[] partitions=new StringBuffer[partitionNum];
         
         System.out.println("collection: "+collection.size());
         System.out.println("uniqueKeys: "+uniqueKeys.size());
         
         for (int i=0;i<partitionNum;i++)
-        	partitions[i] = new StringBuffer("");
+            partitions[i] = new StringBuffer("");
         
         for (Object key:uniqueKeys){
             keyHashcode.put(key,(key.hashCode())%partitionNum);

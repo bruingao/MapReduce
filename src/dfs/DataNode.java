@@ -142,7 +142,7 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
     @Override
     public void removeFile(String filename) throws RemoteException {
     
-    	/* remove a local file chunk */
+        /* remove a local file chunk */
         try{
             File file = new File(dataNodePath+filename);
             file.setWritable(true);

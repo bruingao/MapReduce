@@ -12,5 +12,5 @@ import Common.Collector;
  * @since       1.0
  */
 public interface Mapper {
-    public void map(Object key, Object value, Collector collector);
+	public void map(Object key, Object value, Collector collector);
 }

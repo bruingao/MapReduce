@@ -19,124 +19,157 @@ import Common.Partitioner;
 import dfs.DataNodeI;
 import format.inputFormatAbs;
 
+/**
+ * MapRunner is the process runner of the parallel mapper tasks.
+ * They work on the TaskTracker host machine as parallel processes,
+ * and do the task according to the configurations (mapper classe, 
+ * input/output formats, etc.) of the client programs. Mappers read
+ * data from DataNodes (locally or remotely) and write intermediate
+ * files to specified directory (configured in mapred.conf) on local
+ * host machine.
+ *
+ * @author      Rui Zhang
+ * @author      Jing Gao
+ * @version     1.0, 11/12/2013
+ * @since       1.0
+ */
 public class MapRunner {
-	
-	private static Mapper mapper;
+    
+    private static Mapper mapper;
+    
+    /** 
+     * get the mapper class
+     * 
+     * @return          the mapper class
+     * @since           1.0
+     */
+    public static Mapper getMapper() {
+        return mapper;
+    }
+    
+    /** 
+     * set the mapper class
+     * 
+     * @param mapper    the mapper class
+     * @since           1.0
+     */
+    public static void setMapper(Mapper mapper) {
+        MapRunner.mapper = mapper;
+    }
+    
+    /** 
+     * the main function of the MapRunner, get arguments, run map task,
+     * and out put intermediate files.
+     * 
+     * @param args      string array of arguments
+     * @since           1.0
+     */
+    public static void main(String[] args) {
+        /* mapper classname, jobid, num of partitions, partitionPath, numOfChunks, inputfile, chunks, datanodeHost, regPort, datanode service name */
+        
+        for(int i = 0;i <args.length;i++)
+            System.out.println(args[i]);
+        
+        String mapperName = args[0];
+        
+        int numPartitions = Integer.parseInt(args[1]);
+        
+        String partitionPath = args[2];
+        
+        int jid = Integer.parseInt(args[3]);                
+                
+        int numOfChunks = Integer.parseInt(args[4]);
+        
+        String filename = args[5];
+        
+        String inputformat = args[6];
+        
+        ArrayList<Integer> chunks = new ArrayList<Integer>();
+        
+        int i = 0;
+        while (i < numOfChunks) {
+            chunks.add(Integer.parseInt(args[7 + i]));
+            i++;
+        }
+        
+        
+        System.out.println("phase 1:succeed!");
+        
+        try {
+            Class<Mapper> ma = (Class<Mapper>) Class.forName(mapperName);
+        
+            Constructor<Mapper> cma = ma.getConstructor();
+            
+            mapper = cma.newInstance();
+            
+            System.out.println("phase 2:succeed!");
+            
+            String content[] = new String[numOfChunks];
+            
+            /* read file */
+            int c = 0;
+            
+            Collector collector = new Collector();
+            
+            int regPort = Integer.parseInt(args[7 + numOfChunks*2]);
+            String service = args[8 + numOfChunks * 2];            
+            
+            for (int ck : chunks) {
+                String datanodeHost = args[7 + numOfChunks + c];                
+                System.out.println("datanodeHostname: "+datanodeHost);
+                System.out.println("service name: "+service);
+                Registry reg = LocateRegistry.getRegistry(datanodeHost, regPort);
+                DataNodeI datanode = (DataNodeI)reg.lookup(service);
+                content[c] = new String(datanode.read(filename+"-"+ck),"UTF-8");
+                
+                /* produce key pair */
+                Class<inputFormatAbs> iFormat = (Class<inputFormatAbs>) Class.forName(inputformat);
+                Constructor<inputFormatAbs> constuctor = iFormat.getConstructor(String.class);
+                
+                inputFormatAbs iformat = constuctor.newInstance(content[c]);
+                
+                List<Pair> pairs = iformat.getkvPairs();
+                
+                for(Pair pair : pairs) {
+                    mapper.map(pair.name, pair.content, collector);
+                }
+                c++;
+            }
+                        
+            //collector.sortStringKey();
+            
+            StringBuffer pContents[] = Partitioner.partition(collector.collection,collector.uniqueKeys, numPartitions);
+            
+            //System.out.println(pContents.length);
+            
+            /* partition */
+            String partitions[] = new String[numPartitions];
+            String suffix = "-" + chunks.get(0);
+            for(i = 0; i < numPartitions; i++) {
+                partitions[i] = jid+"partition"+i+suffix;
+                
+                //System.out.println(pContents[i]);
+                Util.writeBinaryToFile(pContents[i].toString().getBytes("UTF-8"), partitionPath+partitions[i]);
+                
+                //System.out.println(partitions[i]);
+            }
+            
+            System.out.println("phase 4:succeed!");
+            
+        } catch (RemoteException e) {
+            e.printStackTrace();
+            System.exit(2);
+        } catch (NotBoundException e) {
+            e.printStackTrace();
+            System.exit(2);
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(1);
+        } 
 
-	public static Mapper getMapper() {
-		return mapper;
-	}
-
-	public static void setMapper(Mapper mapper) {
-		MapRunner.mapper = mapper;
-	}
-	
-	public static void main(String[] args) {
-		/* mapper classname, jobid, num of partitions, partitionPath, numOfChunks, inputfile, chunks, datanodeHost, regPort, datanode service name */
-		
-		for(int i = 0;i <args.length;i++)
-			System.out.println(args[i]);
-		
-		String mapperName = args[0];
-		
-		int numPartitions = Integer.parseInt(args[1]);
-		
-		String partitionPath = args[2];
-		
-		int jid = Integer.parseInt(args[3]);				
-				
-		int numOfChunks = Integer.parseInt(args[4]);
-		
-		String filename = args[5];
-		
-		String inputformat = args[6];
-		
-		ArrayList<Integer> chunks = new ArrayList<Integer>();
-		
-		int i = 0;
-		while (i < numOfChunks) {
-			chunks.add(Integer.parseInt(args[7 + i]));
-			i++;
-		}
-		
-		
-		System.out.println("phase 1:succeed!");
-		
-		try {
-			Class<Mapper> ma = (Class<Mapper>) Class.forName(mapperName);
-		
-			Constructor<Mapper> cma = ma.getConstructor();
-			
-			mapper = cma.newInstance();
-			
-			System.out.println("phase 2:succeed!");
-			
-			String content[] = new String[numOfChunks];
-			
-			/* read file */
-			int c = 0;
-			
-			Collector collector = new Collector();
-			
-			int regPort = Integer.parseInt(args[7 + numOfChunks*2]);
-			String service = args[8 + numOfChunks * 2];			
-			
-			for (int ck : chunks) {
-				String datanodeHost = args[7 + numOfChunks + c];				
-				System.out.println("datanodeHostname: "+datanodeHost);
-				System.out.println("service name: "+service);
-				Registry reg = LocateRegistry.getRegistry(datanodeHost, regPort);
-				DataNodeI datanode = (DataNodeI)reg.lookup(service);
-				content[c] = new String(datanode.read(filename+"-"+ck),"UTF-8");
-				
-				/* produce key pair */
-				Class<inputFormatAbs> iFormat = (Class<inputFormatAbs>) Class.forName(inputformat);
-				Constructor<inputFormatAbs> constuctor = iFormat.getConstructor(String.class);
-				
-				inputFormatAbs iformat = constuctor.newInstance(content[c]);
-				
-				List<Pair> pairs = iformat.getkvPairs();
-				
-				for(Pair pair : pairs) {
-					mapper.map(pair.name, pair.content, collector);
-				}
-				c++;
-			}
-						
-			//collector.sortStringKey();
-			
-			StringBuffer pContents[] = Partitioner.partition(collector.collection,collector.uniqueKeys, numPartitions);
-			
-			//System.out.println(pContents.length);
-			
-			/* partition */
-			String partitions[] = new String[numPartitions];
-			String suffix = "-" + chunks.get(0);
-			for(i = 0; i < numPartitions; i++) {
-				partitions[i] = jid+"partition"+i+suffix;
-				
-				//System.out.println(pContents[i]);
-				Util.writeBinaryToFile(pContents[i].toString().getBytes("UTF-8"), partitionPath+partitions[i]);
-				
-				//System.out.println(partitions[i]);
-			}
-			
-			System.out.println("phase 4:succeed!");
-			
-		} catch (RemoteException e) {
-			e.printStackTrace();
-			System.exit(2);
-		} catch (NotBoundException e) {
-			e.printStackTrace();
-			System.exit(2);
-		} catch (Exception e) {
-			e.printStackTrace();
-			System.exit(1);
-		} 
-
-		
-		
-	}
-	
-	
+        
+        
+    }
+    
+    
 }

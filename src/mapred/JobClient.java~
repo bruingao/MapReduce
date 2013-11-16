@@ -68,11 +68,9 @@ public class JobClient {
 	}
 	
 	/** 
-     * pass the file chunk locations when writing a file to DFS, and record them in checkpoint
+     * run job with specified configurations
      * 
-     * @param filename  the name of the file to be written
-     * @param num       the number of chunks
-     * @return          the hashmap of chunk number and hashset of residing DataNodes
+     * @param conf      configurations
      * @since           1.0
      */  
 	public void runJob(JobConf conf) throws RemoteException{

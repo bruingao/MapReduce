@@ -44,12 +44,12 @@ public class outputFormat extends inputFormatAbs{
      * @since           1.0
      */
     public StringBuffer getOutput() {
-    	StringBuffer sb=new StringBuffer("");
+        StringBuffer sb=new StringBuffer("");
         for (int i=0;i<kvPairs.size();i++){
-        	sb.append(kvPairs.get(i).name);
-        	sb.append(" ");
-        	sb.append(kvPairs.get(i).content);
-        	sb.append("\n");
+            sb.append(kvPairs.get(i).name);
+            sb.append(" ");
+            sb.append(kvPairs.get(i).content);
+            sb.append("\n");
         }
         return sb;
     }
