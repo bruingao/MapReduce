@@ -32,11 +32,6 @@ import mapred.jobThread;
  */
 public final class jobScheduler {
     
-    /** 
-     * constructor of jobScheduler class
-     * 
-     * @since           1.0
-     */
     private jobScheduler(){}
     
     public static ConcurrentHashMap<String, Integer> nodeToNumTasks
@@ -78,49 +73,24 @@ public final class jobScheduler {
     private static ConcurrentHashMap<Integer, ArrayList<String>> jobToReducers
         = new ConcurrentHashMap<Integer, ArrayList<String>>();
     
-    /** 
-     * get mapper progress
-     * 
-     * @param jid       mapper job id
-     * @return          mapper progress (0-1)
-     * @since           1.0
-     */
+//    /* which nodes has the intermediate files */
+//    private static ConcurrentHashMap<Integer, String> jobToInter
+//        =new ConcurrentHashMap<Integer, String>(); 
+    
     public static double getMapperPercent(int jid) {
         return (1 - (double)uncompletedMappers.get(jid)/(double)numMappers.get(jid));
     }
     
-    /** 
-     * get reducer progress
-     * 
-     * @param jid       reducer job id
-     * @return          reducer progress (0-1)
-     * @since           1.0
-     */
     public static double getReducerPercet(int jid) {
         if(numReducers.get(jid) == -1)
             return 0;
         return (1 - (double)uncompletedReducers.get(jid)/(double)numReducers.get(jid));
     }
     
-    /** 
-     * get job status
-     * 
-     * @param jid       job id
-     * @return          true if completed; false otherwise
-     * @since           1.0
-     */
     public static boolean checkStatus (int jid) {
         return (uncompletedReducers.get(jid) == 0) && (uncompletedMappers.get(jid) == 0);
     }
     
-    /** 
-     * decide the distribution of mappers
-     * 
-     * @param filechunks    file chunks needed by mappers
-     * @param jid           job id
-     * @return              resulting locations of file chunks and their source nodes
-     * @since               1.0
-     */
     public static Hashtable<String,Hashtable<Integer, String>> decideMappers(Hashtable<Integer, HashSet<String>> filechunks, int jid) {
         /* check every filechunk's replication nodes and choose the one with fewest mappers running.
          */
@@ -198,20 +168,17 @@ public final class jobScheduler {
         return nodeTochunks;
     }
     
-    /** 
-     * determine the distribution of reducers
-     * 
-     * @param jid       mapper job id
-     * @param num       the number of reducers
-     * @return          list of resulting nodes
-     * @since           1.0
-     */
+    
     public static ArrayList<String> decideReducers(int jid, int num) {
         ArrayList<String> nodes = new ArrayList<String>();
         for(int i = 0;i < num; i++) {
             String opNode = chooseBestNode(nodeStatus.keySet(), nodeToNumTasks);
             if(opNode == null) {
-
+//                if(i > 0) {
+//                    for(int j = 0;j<i;j++) {
+//                        nodeToNumTasks.put(nodes.get(j), nodeToNumTasks.get(nodes.get(j))-1);
+//                    }
+//                }
                 System.out.println("reducer null");
                 return null;
             }
@@ -236,13 +203,6 @@ public final class jobScheduler {
         return nodes;
     }
     
-    /** 
-     * post-processing of mapper succeed event
-     * 
-     * @param jid       mapper job id
-     * @param tnode     notifying node
-     * @since           1.0
-     */
     public static void mapperSucceed(int jid, String tnode) {
 //        int chunknum = jobToMappers.get(jid).get(tnode).size();
 //        
@@ -265,14 +225,6 @@ public final class jobScheduler {
 
     }
     
-    /** 
-     * post-processing of reducer succeed event
-     * 
-     * @param jid       reducer job id
-     * @param tnode     notifying node
-     * @param partition number of partitions
-     * @since           1.0
-     */
     public static void reducerSucceed(int jid, String tnode, int partition) {
         
         /* Decrease the number of tnode by 1 */
@@ -284,15 +236,6 @@ public final class jobScheduler {
         uncompletedReducers.put(jid, uncompletedReducers.get(jid)-1);
     }
     
-    /** 
-     * post-processing of mapper fail event
-     * 
-     * @param jid       mapper job id
-     * @param tnode     notifying node
-     * @param chunks    associated file chunks
-     * @return          pair of destination node and file chunks
-     * @since           1.0
-     */
     public static Pair mapperFail(int jid, String tnode, Hashtable<Integer,HashSet<String>> chunks) {
         /* set the failed node status to false */
         nodeStatus.put(tnode, false);
@@ -302,7 +245,10 @@ public final class jobScheduler {
                 
         /* what chunk does this failed node has */
         Hashtable<Integer, String> failChunk = jobToMappers.get(jid).get(tnode);
-
+        
+//        int chunksize = failChunk.size();
+//        
+//        int mc = JobTracker.minChunk;
         nodeToNumTasks.put(tnode, nodeToNumTasks.get(tnode) - 1);
         
         nodeToMapJobs.get(tnode).remove(jid);
@@ -344,15 +290,7 @@ public final class jobScheduler {
         return new Pair(opNode, failChunk);
     }
     
-    /** 
-     * post-processing of reducer fail event
-     * 
-     * @param jid       reducer job id
-     * @param tnode     notifying node
-     * @param partition reducer partition number
-     * @return          destination node
-     * @since           1.0
-     */
+    /* reducer fail */
     public static String reducerFail(int jid, String tnode, int partition) {
         
         nodeToNumTasks.put(tnode, nodeToNumTasks.get(tnode) - 1);
@@ -374,14 +312,7 @@ public final class jobScheduler {
         
     }
     
-    /** 
-     * choose the best tasktracker whose mapper or reducer with least workload
-     * 
-     * @param set       candidate nodes
-     * @param workers   worker nodes and loads
-     * @return          chosen node
-     * @since           1.0
-     */
+    /* choose the best tasktracker whose mapper or reducer with least workload */
     public static String chooseBestNode(Set<String> set, ConcurrentHashMap<String, Integer> workers) {
         if(set == null)
             return null;
@@ -400,12 +331,6 @@ public final class jobScheduler {
         return res;
     }
     
-    /** 
-     * remove all info about a job in the MapReduce framework
-     * 
-     * @param jid       job id
-     * @since           1.0
-     */
     public static void removeAll(Integer jid) {
         
         for (String node : jobToMappers.get(jid).keySet()) {
