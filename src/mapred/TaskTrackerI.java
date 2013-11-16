@@ -15,10 +15,10 @@ import java.util.HashSet;
  * @since       1.0
  */
 public interface TaskTrackerI extends Remote{
-    public void pushMapTask(int jobid, JobConf conf, Hashtable<Integer, String> chunks) throws RemoteException;
-    public void pushReduceTask(int jobid, JobConf conf, HashSet<String> interNodes, int partition) throws RemoteException;
-    
-    public String getInterFiles(int jobid, int partition) throws RemoteException;
-    
-    public boolean heartBeat() throws RemoteException;
+	public void pushMapTask(int jobid, JobConf conf, Hashtable<Integer, String> chunks) throws RemoteException;
+	public void pushReduceTask(int jobid, JobConf conf, HashSet<String> interNodes, int partition) throws RemoteException;
+	
+	public String getInterFiles(int jobid, int partition) throws RemoteException;
+	
+	public boolean heartBeat() throws RemoteException;
 }

@@ -2,6 +2,7 @@ package format;
 
 import java.util.*;
 
+import Common.Collector;
 import Common.Pair;
 
 
@@ -15,41 +16,24 @@ import Common.Pair;
  * @version     1.0, 11/12/2013
  * @since       1.0
  */
-public class outputFormat extends inputFormatAbs{
+public class outputFormat{
 
-    /** 
-     * constructor of outputFormat
-     * 
-     * @param content   list of kv pairs
-     * @since           1.0
-     */
-    public outputFormat(List<Pair> kvPairs) {
-        this.kvPairs=kvPairs;
-    }
-    
-    /** 
-     * get list of kv pairs
-     * 
-     * @return          list of kv pairs
-     * @since           1.0
-     */
-    public List<Pair> getkvPairs(){
-        return kvPairs;
-    }
-    
-    /** 
+    /**
      * convert list kv pairs to output string
-     * 
+     *
      * @return          string buffer of output
      * @since           1.0
      */
-    public StringBuffer getOutput() {
+    public StringBuffer getOutput(Collector collector) {
         StringBuffer sb=new StringBuffer("");
-        for (int i=0;i<kvPairs.size();i++){
-            sb.append(kvPairs.get(i).name);
-            sb.append(" ");
-            sb.append(kvPairs.get(i).content);
-            sb.append("\n");
+        for (Object key : collector.collection.keySet())
+        {
+            for (Object value : collector.collection.get(key)){
+                sb.append(key);
+                sb.append(" ");
+                sb.append(value);
+                sb.append("\n");
+            }
         }
         return sb;
     }

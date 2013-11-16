@@ -1,6 +1,5 @@
 package dfs;
 
-import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.rmi.NotBoundException;
@@ -12,10 +11,11 @@ import java.util.HashSet;
 
 import Common.Util;
 
+
 /**
  * DataNode is the class running on a DataNode. It reads configuration
  * files to get parameters and list of DataNode hostnames, creates local
- * RMI registry and bind itself as a service. The DataNode is able to 
+ * RMI registry and bind itself as a service. The DataNode is able to
  * recover from failures, read/write/remove local file chunks, make replica
  * of file chunks, and respond to heartbeat status checks.
  *
@@ -25,7 +25,7 @@ import Common.Util;
  * @since       1.0
  */
 public class DataNode extends UnicastRemoteObject implements DataNodeI{
-    
+
     private static final long serialVersionUID = 2961863470847180775L;
     
     /* configuration file */
@@ -45,27 +45,29 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
     private static volatile HashSet<String> datanodes 
         = new HashSet<String>();
     
-    /* paremeters read from the configuration file */
+    /* all the files' path */
     private static String dataNodePath;
+        
+    /* paremeters read from the configuration file */
     private static String nameNodeHostname;
     private static Integer nameRegPort;
     private static Integer dataRegPort;
-    private static Integer dataNodePort;   
+    private static Integer dataNodePort;
     private static String dataNodeServiceName;
     private static String nameNodeServiceName;
     
-    /** 
+    /**
      * constructor of DataNode class
-     * 
+     *
      * @since           1.0
      */
     public DataNode() throws RemoteException{
         
     }
     
-    /** 
+    /**
      * thread-safely add a string to a hashset
-     * 
+     *
      * @param obj       the hashset
      * @param filename  the string to be added to the hashset
      * @since           1.0
@@ -76,9 +78,9 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
         }
     }
     
-    /** 
+    /**
      * thread-safely remove a string from a hashset
-     * 
+     *
      * @param obj       the hashset
      * @param filename  the string to be removed from the hashset
      * @since           1.0
@@ -89,9 +91,9 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
         }
     }
     
-    /** 
+    /**
      * recover the DataNode from local checkpoint
-     * 
+     *
      * @since           1.0
      */
     private void Init() {
@@ -100,71 +102,63 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
             files = (HashSet<String>) obj;
     }
     
-    /** 
+    /**
      * read the content of a file chunk
-     * 
+     *
      * @param filename  the file name of the chunk to be read
      * @return          the byte array of the file chunk
      * @since           1.0
      */
     @Override
     public byte[] read(String filename) {
+        
         String temp = dataNodePath + filename;
+        
         return Util.readFromFile(temp);
     }
     
-    /** 
+    /**
      * write the byte array to a file chunk
-     * 
+     *
      * @param filename  the file name of the chunk
      * @param content   the byte array to be written to file chunk
      * @since           1.0
      */
     @Override
     public void write(String filename, byte[] content) {
+        
         String temp = dataNodePath + filename;
+        
         System.out.println(content);
         System.out.println(temp);
+        
         Util.writeBinaryToFile(content, temp);
         
-        /* update local information */
         add_ts(files,filename);
+        
         /* check point */
         Util.checkpointFiles(dataNodePath + "files", files);
     }
     
-    /** 
+    /**
      * remove a local file chunk, and then update local information
      * and  checkpoint
-     * 
+     *
      * @param filename  the file name of the chunk to be removed
      * @since           1.0
      */
     @Override
     public void removeFile(String filename) throws RemoteException {
-    
-        /* remove a local file chunk */
-        try{
-            File file = new File(dataNodePath+filename);
-            file.setWritable(true);
-            if(file.delete()){
-            
-            }else{
-                System.out.println("Delete operation is failed.");
-            }
-        }catch(Exception e){
-            e.printStackTrace();
-        }
-        
-        /* update local information */
+                
         remove_ts(files,filename);
+        
         /* check point */
         Util.checkpointFiles(dataNodePath + "files", files);
     }
 
-    /** 
+    /**
      * read the list of DataNode hostnames and store them
-     * 
+     *
      * @param filename  the file name of DataNode list file
      * @since           1.0
      */
@@ -177,9 +171,9 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
         }    
     }
     
-    /** 
+    /**
      * respond to status check from the NameNode
-     * 
+     *
      * @return          true indicating DataNode is alive
      * @since           1.0
      */
@@ -188,10 +182,10 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
         return true;
     }
     
-    /** 
+    /**
      * make a replica of the specified file chunk from one of the residing DataNodes,
      * and write the replica on local DataNode
-     * 
+     *
      * @param filename  the file name of the chunk to be replicated
      * @param nodes     the residing nodes
      * @return          true if success, false otherwise
@@ -200,8 +194,10 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
     @Override
     public boolean replication(String filename, String[] nodes)
             throws RemoteException {
+        
         if(nodes.length <= 0)
             return false;
+        
         int index = 0;
         
         try {
@@ -212,16 +208,17 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
             this.write(filename, content);
             return true;
         } catch (NotBoundException e) {
+            // TODO Auto-generated catch block
             e.printStackTrace();
             return false;
         }
     }
     
-    /** 
+    /**
      * The main function on the DataNode. It reads the configuration file
-     * and DataNode list, recovers from local checkpoint, creates a local 
+     * and DataNode list, recovers from local checkpoint, creates a local
      * RMI registry and binds the DataNode on the registry as a service.
-     * 
+     *
      * @param args      no arguments needed, parameters can be written in the configuration file
      * @since           1.0
      */
@@ -240,10 +237,15 @@ public class DataNode extends UnicastRemoteObject implements DataNodeI{
              
              unexportObject(datanode, false);
              DataNodeI stub = (DataNodeI) exportObject(datanode, dataNodePort);
+             
              registry = LocateRegistry.createRegistry(dataRegPort);
+             
              InetAddress address = InetAddress.getLocalHost();
+             
              System.out.println(address.getHostAddress());
+             
              registry.rebind(dataNodeServiceName, stub);
+             
         }
         catch (Exception e)
         {

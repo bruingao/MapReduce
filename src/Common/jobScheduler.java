@@ -3,12 +3,10 @@ package Common;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.HashSet;
-import java.util.Hashtable;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import mapred.JobTracker;
-import mapred.jobThread;
 
 
 /* jobScheduler works on JobTracker and it is a helper to JobTracker.
@@ -32,11 +30,6 @@ import mapred.jobThread;
  */
 public final class jobScheduler {
     
-    /** 
-     * constructor of jobScheduler class
-     * 
-     * @since           1.0
-     */
     private jobScheduler(){}
     
     public static ConcurrentHashMap<String, Integer> nodeToNumTasks
@@ -77,10 +70,10 @@ public final class jobScheduler {
     /* job To reducer taskTrackers and corresponding partitions */
     private static ConcurrentHashMap<Integer, ArrayList<String>> jobToReducers
         = new ConcurrentHashMap<Integer, ArrayList<String>>();
-    
-    /** 
+
+    /**
      * get mapper progress
-     * 
+     *
      * @param jid       mapper job id
      * @return          mapper progress (0-1)
      * @since           1.0
@@ -89,9 +82,9 @@ public final class jobScheduler {
         return (1 - (double)uncompletedMappers.get(jid)/(double)numMappers.get(jid));
     }
     
-    /** 
+    /**
      * get reducer progress
-     * 
+     *
      * @param jid       reducer job id
      * @return          reducer progress (0-1)
      * @since           1.0
@@ -102,9 +95,9 @@ public final class jobScheduler {
         return (1 - (double)uncompletedReducers.get(jid)/(double)numReducers.get(jid));
     }
     
-    /** 
+    /**
      * get job status
-     * 
+     *
      * @param jid       job id
      * @return          true if completed; false otherwise
      * @since           1.0
@@ -113,9 +106,9 @@ public final class jobScheduler {
         return (uncompletedReducers.get(jid) == 0) && (uncompletedMappers.get(jid) == 0);
     }
     
-    /** 
+    /**
      * decide the distribution of mappers
-     * 
+     *
      * @param filechunks    file chunks needed by mappers
      * @param jid           job id
      * @return              resulting locations of file chunks and their source nodes
@@ -180,7 +173,7 @@ public final class jobScheduler {
         for(String node : nodeTochunks.keySet()) {
 //            int mc = JobTracker.minChunk;
 //            nodeToNumTasks.put(node, nodeToNumTasks.get(node)+ 1);
-            HashSet<Integer> jobs = nodeToMapJobs.get(node);
+            HashSet<Integer> jobs = new HashSet<Integer>(nodeToMapJobs.get(node));
             
             jobs.add(jid);
             nodeToMapJobs.put(node, jobs);
@@ -198,9 +191,9 @@ public final class jobScheduler {
         return nodeTochunks;
     }
     
-    /** 
+    /**
      * determine the distribution of reducers
-     * 
+     *
      * @param jid       mapper job id
      * @param num       the number of reducers
      * @return          list of resulting nodes
@@ -211,7 +204,11 @@ public final class jobScheduler {
         for(int i = 0;i < num; i++) {
             String opNode = chooseBestNode(nodeStatus.keySet(), nodeToNumTasks);
             if(opNode == null) {
-
+//                if(i > 0) {
+//                    for(int j = 0;j<i;j++) {
+//                        nodeToNumTasks.put(nodes.get(j), nodeToNumTasks.get(nodes.get(j))-1);
+//                    }
+//                }
                 System.out.println("reducer null");
                 return null;
             }
@@ -222,7 +219,7 @@ public final class jobScheduler {
         /* update the hashmap independently from the last loop in case of choosebestnode return null */
         if(nodes != null) {
             for (int i = 0; i < num; i++) {
-                HashSet<Pair> jobs = nodeToReduceJobs.get(nodes.get(i));
+                HashSet<Pair> jobs = new HashSet<Pair>(nodeToReduceJobs.get(nodes.get(i)));
                 
                 jobs.add(new Pair(jid, i));
                 nodeToReduceJobs.put(nodes.get(i), jobs);
@@ -236,28 +233,21 @@ public final class jobScheduler {
         return nodes;
     }
     
-    /** 
+    /**
      * post-processing of mapper succeed event
-     * 
+     *
      * @param jid       mapper job id
      * @param tnode     notifying node
      * @since           1.0
      */
     public static void mapperSucceed(int jid, String tnode) {
-//        int chunknum = jobToMappers.get(jid).get(tnode).size();
-//        
-//        int mc = JobTracker.minChunk;
+
         System.out.println("before succeed: " + nodeToNumTasks.get(tnode));
-//        nodeToNumMappers.put(tnode, nodeToNumMappers.get(tnode) -  (chunknum + mc -1)/mc);
         
         nodeToNumTasks.put(tnode, nodeToNumTasks.get(tnode) -  1);
         
         System.out.println("after succeed: " + nodeToNumTasks.get(tnode));
 
-        /* should not remove mappers's information 
-         * in case of jobtracker failure in the process 
-         * of retrieving intermediate data by reducers */
-        //jobToMappers.get(jid).get(tnode).clear();
         nodeToMapJobs.get(tnode).remove(jid);
         System.out.println("before succeed: " + uncompletedMappers.get(jid));
         uncompletedMappers.put(jid, uncompletedMappers.get(jid) - 1);
@@ -265,9 +255,9 @@ public final class jobScheduler {
 
     }
     
-    /** 
+    /**
      * post-processing of reducer succeed event
-     * 
+     *
      * @param jid       reducer job id
      * @param tnode     notifying node
      * @param partition number of partitions
@@ -278,15 +268,28 @@ public final class jobScheduler {
         /* Decrease the number of tnode by 1 */
         nodeToNumTasks.put(tnode, nodeToNumTasks.get(tnode) - 1);
         
-        nodeToReduceJobs.get(tnode).remove(new Pair(jid, partition));
+        System.out.println("before remove: " + nodeToReduceJobs.get(tnode).size());
+        
+        HashSet<Pair> pairs = new HashSet<Pair>();
+        
+        for(Pair pair : nodeToReduceJobs.get(tnode))
+        {
+            if(pair.name.equals(jid))
+                pairs.add(pair);
+        }
+        
+        for(Pair pair : pairs)
+            nodeToReduceJobs.get(tnode).remove(pair);
+        
+        System.out.println("after remove: " + nodeToReduceJobs.get(tnode).size());
 
         /* Decrease the number of uncompleted reducers by 1 */
         uncompletedReducers.put(jid, uncompletedReducers.get(jid)-1);
     }
     
-    /** 
+    /**
      * post-processing of mapper fail event
-     * 
+     *
      * @param jid       mapper job id
      * @param tnode     notifying node
      * @param chunks    associated file chunks
@@ -302,7 +305,10 @@ public final class jobScheduler {
                 
         /* what chunk does this failed node has */
         Hashtable<Integer, String> failChunk = jobToMappers.get(jid).get(tnode);
-
+        
+        if (failChunk == null)
+            return null;
+        
         nodeToNumTasks.put(tnode, nodeToNumTasks.get(tnode) - 1);
         
         nodeToMapJobs.get(tnode).remove(jid);
@@ -333,7 +339,17 @@ public final class jobScheduler {
             opChunk = failChunk;
         else
             opChunk.putAll(failChunk);
-                
+        
+        if(jobToMappers.get(jid).keySet().contains(opNode)){
+            System.out.println("before repush: "+uncompletedMappers.get(jid));
+            int newR = numMappers.get(jid) -1;
+            int newUR = uncompletedMappers.get(jid) - 1;
+            numMappers.put(jid, newR);
+            uncompletedMappers.put(jid, newUR);
+            System.out.println("after repush: "+uncompletedMappers.get(jid));
+
+        }
+        
         jobToMappers.get(jid).put(opNode, opChunk);
         
 //        nodeToNumTasks.put(opNode, nodeToNumTasks.get(opNode) + 1);
@@ -344,9 +360,9 @@ public final class jobScheduler {
         return new Pair(opNode, failChunk);
     }
     
-    /** 
+    /**
      * post-processing of reducer fail event
-     * 
+     *
      * @param jid       reducer job id
      * @param tnode     notifying node
      * @param partition reducer partition number
@@ -355,11 +371,27 @@ public final class jobScheduler {
      */
     public static String reducerFail(int jid, String tnode, int partition) {
         
+        System.out.println("reduce fail!");
         nodeToNumTasks.put(tnode, nodeToNumTasks.get(tnode) - 1);
         
         nodeStatus.put(tnode, false);
         
-        nodeToReduceJobs.get(tnode).remove(new Pair(jid, partition));
+//        nodeToReduceJobs.get(tnode).remove(new Pair(jid, partition));
+        
+        System.out.println("before remove: " + nodeToReduceJobs.get(tnode).size());
+        
+        HashSet<Pair> pairs = new HashSet<Pair>();
+        
+        for(Pair pair : nodeToReduceJobs.get(tnode))
+        {
+            if(pair.name.equals(jid))
+                pairs.add(pair);
+        }
+        
+        for(Pair pair : pairs)
+            nodeToReduceJobs.get(tnode).remove(pair);
+        
+        System.out.println("after remove: " + nodeToReduceJobs.get(tnode).size());
         
         String opNode = chooseBestNode(nodeStatus.keySet(), nodeToNumTasks);
         
@@ -374,9 +406,9 @@ public final class jobScheduler {
         
     }
     
-    /** 
+    /**
      * choose the best tasktracker whose mapper or reducer with least workload
-     * 
+     *
      * @param set       candidate nodes
      * @param workers   worker nodes and loads
      * @return          chosen node
@@ -400,17 +432,23 @@ public final class jobScheduler {
         return res;
     }
     
-    /** 
+    /**
      * remove all info about a job in the MapReduce framework
-     * 
+     *
      * @param jid       job id
      * @since           1.0
      */
     public static void removeAll(Integer jid) {
         
+        if(jobToMappers.get(jid) == null)
+            return;
+        
         for (String node : jobToMappers.get(jid).keySet()) {
             nodeToNumTasks.put(node, nodeToNumTasks.get(node)-1);
         }
+        
+        if(jobToReducers.get(jid) == null)
+            return;
         
         for (String node : jobToReducers.get(jid)) {
             nodeToNumTasks.put(node, nodeToNumTasks.get(node)-1);
@@ -431,6 +469,7 @@ public final class jobScheduler {
                 nodeToReduceJobs.get(node).remove(pair);
             }
         }
+        
         
         numMappers.remove(jid);
 

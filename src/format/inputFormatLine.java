@@ -4,9 +4,10 @@ import java.util.*;
 
 import Common.Pair;
 
+
 /**
  * inputFormatLine is one recognized input format of
- * MapReduce programs written by user. Key will be 
+ * MapReduce programs written by user. Key will be
  * line number; value will be splitted string.
  *
  * @author      Rui Zhang
@@ -14,11 +15,12 @@ import Common.Pair;
  * @version     1.0, 11/12/2013
  * @since       1.0
  */
+
 public class inputFormatLine extends inputFormatAbs{
-    
-    /** 
+
+    /**
      * constructor of inputFormatLine
-     * 
+     *
      * @param content   line content string
      * @since           1.0
      */
@@ -26,9 +28,9 @@ public class inputFormatLine extends inputFormatAbs{
         this.content=content;
     }
     
-    /** 
+    /**
      * split line string and get values
-     * 
+     *
      * @return          list of kv pairs
      * @since           1.0
      */

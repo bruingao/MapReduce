@@ -12,6 +12,7 @@ import Common.Util;
 
 import mapred.JobTracker.NOTIFY_RESULT;
 
+
 /**
  * taskMapThread is thread running on the TaskTracker,
  * it execute a mapper task in a separate process and 
@@ -66,10 +67,7 @@ public class taskMapThread implements Runnable{
      */
     @Override
     public void run(){
-        
-//        List<String> commands = new ArrayList<String>();
-        
-        
+
         /* Why we transfer all the parameters to maprunner but not let the runner read configuration file 
          * is because of performance concern. (Disk read is expensive and a lot of unrelated parameters) */
         String cmd = "java "+ "mapred.MapRunner" + " " + this.classname + " " + numPartitions + " " + partitionPath 
@@ -90,38 +88,13 @@ public class taskMapThread implements Runnable{
         cmd +=  regPort + " " + serviceName;
         
         System.out.println(cmd);
-        
-//        for(String s : cmd.split(" "))
-//            commands.add(s);
-        
-//        ProcessBuilder process = new ProcessBuilder();
-//        
-//        process.command(commands);
-        
+
         JobTrackerI jobtracker = null;
                 
         try {
             
             int exitStatus = Util.buildProcess(cmd);
-            
-//            System.out.println("before start");
-//            process.inheritIO();
-//            Process task = process.start();
-//                        
-////            StreamGobbler errorGobbler = new StreamGobbler(task.getErrorStream(), "ERROR");
-////            StreamGobbler outputGobbler = new StreamGobbler(task.getInputStream(), "OUTPUT");
-//            
-////            errorGobbler.start();
-////            outputGobbler.start();
-//            
-//            System.out.println("after start");
-//            
-//            int exitStatus = task.waitFor();
-            
-            //InputStream str = task.getInputStream();
-            //String response = Util.convertStreamToStr(str);
-            //String response = "for test";
-            
+
             System.out.println("exitcode: "+exitStatus);
             
             Registry reg = LocateRegistry.getRegistry(TaskTracker.jobHostname, TaskTracker.jobRegPort);

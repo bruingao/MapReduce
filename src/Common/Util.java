@@ -26,9 +26,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 /**
- * Util is a utility class for our program. It provide variaty of 
- * functionalities, like lower-level local I/O, parsing, merging, 
- * and some other calculations.
+ * Util is a utility class for our program. It compute the hash code of a givin method.
  * 
  * @author      Rui Zhang
  * @author      Jing Gao
@@ -112,7 +110,7 @@ public final class Util {
         return content;
     }
     
-    /** 
+    /**
      * write byte array to local file
      *
      * @param content   the byte array of content to be written
@@ -148,7 +146,7 @@ public final class Util {
         
     }
     
-    /** 
+    /**
      * parsing a string with given delimiter
      *
      * @param String    the string to be parsed
@@ -171,8 +169,8 @@ public final class Util {
         
     }
     
-    /** 
-     * read the configuration file line by line and fill in the variables 
+    /**
+     * read the configuration file line by line and fill in the variables
      * in the destination class
      *
      * @param filename  the file name of the configuration file
@@ -221,7 +219,7 @@ public final class Util {
         }
     }
     
-    /** 
+    /**
      * write object to file
      *
      * @param filename  the destination file name
@@ -259,7 +257,7 @@ public final class Util {
         }
     }
     
-    /** 
+    /**
      * read object from file
      *
      * @param filename  the destination file name
@@ -284,12 +282,14 @@ public final class Util {
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
+            // TODO Auto-generated catch block
             e.printStackTrace();
         }finally {
             try {
                 in.close();
                 iin.close();
             } catch (IOException e) {
+                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
         }
@@ -297,7 +297,7 @@ public final class Util {
         return content;
     }
     
-    /** 
+    /**
      * convert file input stream to string
      *
      * @param is        file input stream
@@ -326,7 +326,7 @@ public final class Util {
         }
     }
     
-    /** 
+    /**
      * compute the chunk number for a file with given size and chunk size,
      * break on new lines to avoid cutting in half of a line
      *
@@ -365,7 +365,7 @@ public final class Util {
         
     }
     
-    /** 
+    /**
      * build a new process from command line, used when generating
      * mapper/reducer processes.
      *
@@ -396,7 +396,7 @@ public final class Util {
 
     }
     
-    /** 
+    /**
      * parse string of specific format to key values hash map.
      *
      * @param orderedContent    the string with ordered key value pairs
@@ -404,7 +404,7 @@ public final class Util {
      * @since                   1.0
      */
     public static HashMap<String, ArrayList<String>> parseStr(String orderedContent) {
-
+        
         String lines[] = orderedContent.split("\n");
         
         HashMap<String, ArrayList<String>> table = new HashMap<String, ArrayList<String>>();
@@ -419,11 +419,11 @@ public final class Util {
             temp.add(p[1]);
             table.put(p[0], temp);
         }
-
+        
         return table;
     }
     
-    /** 
+    /**
      * merge two hashmaps into one
      *
      * @param p1        the first hashmap to be merged
@@ -446,17 +446,10 @@ public final class Util {
         return p1;
     }
     
-    /** 
-     * thread safely making checkpoints
-     *
-     * @param filename  checkpoint file name
-     * @param obj       the object to be written
-     * @since           1.0
-     */
     public static void checkpointFiles(String filename, Object obj) {
         synchronized(obj){
             Util.writeObject(filename, obj);
         }
     }
-    
+        
 }

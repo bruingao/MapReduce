@@ -1,6 +1,10 @@
 package mapred;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.rmi.NotBoundException;
@@ -13,6 +17,8 @@ import java.util.Hashtable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -62,7 +68,7 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
     private static String dfsPath = "conf/dfs.conf";
     
     private static String slavePath = "conf/slaves";
-    
+
     public static Integer maxTasks;
     
     /* job tracker's host address */
@@ -116,17 +122,15 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
     public static String hostAddress;
     
     /* thread executor */
-    private static ExecutorService executor = Executors.newCachedThreadPool();
-    
-    
+    private static ExecutorService executor;
+
     /* jobid to intermediate file */
     public static ConcurrentHashMap<Integer, HashSet<String[]>> jobToInter
         = new ConcurrentHashMap<Integer, HashSet<String[]>>();
     
     public static ConcurrentHashMap<Integer, Integer> jobToIncompleteMapper
         = new ConcurrentHashMap<Integer, Integer>();
-    
-    
+
     /* number of mappers running on this task tracker */
     public static Integer numMappers = 0;
     
@@ -168,7 +172,7 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
     protected TaskTracker() throws RemoteException {
         super();
     }
-    
+
     /** 
      * accept mapper task pushed from JobTracker 
      * 
@@ -216,12 +220,18 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
         
         Integer n = jobToIncompleteMapper.get(jid);
         
+        
         if (n == null)
             n = num;
-        else 
+        else {
+            System.out.println(jid+" already run on this machine! previously " + n);
             n += num;
+        }
         
         jobToIncompleteMapper.put(jid, n);
+        
+        System.out.println(jid+" after" + jobToIncompleteMapper.get(jid));
+
         
         increase_ts(numMappers, num);
         
@@ -287,7 +297,12 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
             Util.writeBinaryToFile((byte[])reducer.content, path + ".class");
             
             /* new reducer instance and do job */
-            runReduceTask(jid, conf, partition, (String)reducer.name, interNodes);
+            
+            taskReduceThread tt = new taskReduceThread(jid, conf, partition, (String) reducer.name, interNodes);
+            
+            executor.execute(tt);
+            
+//            runReduceTask(jid, conf, partition, (String)reducer.name, interNodes);
             
         } catch(Exception e) {
             System.out.println("Job "+jid+"failed!");
@@ -309,6 +324,8 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
              Util.readConfigurationFile(confPath, tasktracker);
              Util.readConfigurationFile(dfsPath, tasktracker);
                           
+             executor = Executors.newFixedThreadPool(maxTasks);
+             
              if(!sysFilePath.endsWith("/")) {
                  sysFilePath += "/";
              }
@@ -365,24 +382,87 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
         
         HashSet<String[]> filePath = jobToInter.get(jobid);
         
+        
         if (filePath == null)
             return null;
         
+        System.out.println("file num: "+filePath.size());
+
+        
         StringBuffer res = new StringBuffer("");
         
-        for(String[] path : filePath) {
-            try {
-                System.out.println("filepath: " + interFilePath +path[partition]);
-                String temp = new String(Util.readFromFile(interFilePath + path[partition]), "UTF-8");
-                res.append(temp);
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-                return null;
-            }
+        int nSize = filePath.size();
+        
+        if(nSize == 0) {
+            return "";
         }
         
-        //System.out.println("getinterfiles: "+res);
+        String currentLine[] = new String[nSize];
+        String values[] = new String[nSize];
+        SortedSet<String> orders = new TreeSet<String>();
         
+        InputStreamReader isr[] = new InputStreamReader[nSize];
+        BufferedReader br[] = new BufferedReader[nSize];
+        FileInputStream in[] = new FileInputStream[nSize];
+        int i = 0;
+        for(String[] path : filePath) {
+            try {
+                in[i] = new FileInputStream(interFilePath + path[partition]);
+            } catch (FileNotFoundException e) {
+                return "";
+            }
+            isr[i] = new InputStreamReader(in[i]);
+            br[i] = new BufferedReader(isr[i]);
+            
+            String temp;
+            try {
+                temp = br[i].readLine();
+            } catch (IOException e) {
+                return "";
+            }
+            if (temp==null)
+                continue;
+            String lines[] = temp.split(" ");
+            currentLine[i] = lines[0];
+            values[i] = lines[1];
+            orders.add(currentLine[i]);
+            i++;
+        }
+        
+        if(orders.size()==0)
+            return "";
+        
+        while(true) {
+            if(orders.size()==0)
+                break;
+            String minStr = orders.first();
+            
+            for (i = 0;i<nSize;i++){
+                while (currentLine[i] != null && currentLine[i].equals(minStr)) {
+                    res.append(currentLine[i] + " " + values[i] + "\n");
+                    String temp = null;
+                    try {
+                        temp = br[i].readLine();
+                    } catch (IOException e) {
+                        return "";
+                    }
+                    if (temp != null) {
+                        String lines[] = temp.split(" ");
+                        currentLine[i] = lines[0];
+                        values[i] = lines[1];
+                    } else {
+                        currentLine[i] = null;
+                    }
+                }
+            }
+            orders.remove(minStr);
+            for (i = 0;i<nSize;i++){
+                if(currentLine[i] == null)
+                    continue;
+                orders.add(currentLine[i]);
+            }
+        }
+
         return res.toString();
         
     }
@@ -396,14 +476,15 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
      * @param interNodes    set of intermediate nodes
      * @since               1.0
      */
-    public void runReduceTask (int jid, JobConf conf, 
+    public static void runReduceTask (int jid, JobConf conf, 
             int partition, String classname, Set<String> interNodes){
         
         
         String cmd = "java mapred.ReduceRunner " + classname + " " + jid + " " + conf.getOutputfile() + " " +
                 conf.getOutputFormat().getName() + " " + dataRegPort + " " + dataNodeServiceName + " " + 
                 taskRegPort+ " " + taskServiceName + " " + nameRegPort + " " +
-                nameNodeServiceName + " " + nameNodeHostname + " " + partition + " " + chunksize + " " + interNodes.size();
+                nameNodeServiceName + " " + nameNodeHostname + " " + partition + " " + chunksize + " " + interNodes.size() +
+                " " + interFilePath;
         
         for (String node : interNodes) {
             cmd += " " + node;

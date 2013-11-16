@@ -13,11 +13,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import dfs.DataNodeI;
 import dfs.NameNodeI;
+
 import Common.Util;
 
-
 /**
- * MRManager is the class running on DFS client. User can 
+ * MRManager is the class running on DFS client. User can
  * import file to DFS, export from DFS, remove file from DFS,
  * list all files in DFS, list all nodes in DFS. Above operations
  * can be done in command line:
@@ -50,10 +50,10 @@ public class MRManager {
     private static Integer chunksize;
     
     
-    /** 
+    /**
      * deal with specified operations to DFS
-     * 
-     * @param cmds      command line arguments       
+     *
+     * @param cmds      command line arguments
      * @since           1.0
      */
     private void doDfs(String[] cmds) throws RemoteException, Exception {
@@ -66,7 +66,7 @@ public class MRManager {
         String cmd = cmds[1];
         
         switch(cmd) {
-        
+                
             /* list all files in DFS */
             case "listfile":
                 ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>> files = namenode.listFiles();
@@ -93,7 +93,7 @@ public class MRManager {
                     System.out.println();
                 }
                 break;
-                
+            
             /* export file in DFS to local machine */
             case "export":
                 if(cmds.length<3){
@@ -107,6 +107,9 @@ public class MRManager {
                     System.out.println("The file does not exist!");
                     break;
                 }
+                
+                System.out.println("num of chunks: "+filechunks.size());
+                
                 SortedSet<Integer> chunkNums = new TreeSet<Integer>(filechunks.keySet());
                 
                 ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
@@ -121,7 +124,7 @@ public class MRManager {
                 Util.writeBinaryToFile(fileContent,theFilename);
                 
                 break;
-                
+            
             /* import local file to DFS */
             case "import":
                 if(cmds.length < 3) {
@@ -137,7 +140,10 @@ public class MRManager {
                 String filename = cmds[3];
                 
                 byte[] content = Util.readFromFile(inputname);
-                    
+                
+                if(content == null)
+                    break;
+                
                 int size = content.length;
                 
                 ArrayList<Integer> range = new ArrayList<Integer>();    
@@ -202,9 +208,9 @@ public class MRManager {
         }
     }
     
-    /** 
+    /**
      * the main function of MRManager, passing the operation to doDfs()
-     * 
+     *
      * @param args      command line arguments
      * @since           1.0
      */

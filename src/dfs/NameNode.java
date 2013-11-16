@@ -16,17 +16,16 @@ import java.util.concurrent.Executors;
 import Common.dfsScheduler;
 import Common.Util;
 
-
 /**
- * NameNode is the class running on a NameNode. It acts as the controlling 
+ * NameNode is the class running on a NameNode. It acts as the controlling
  * hub which works wit DFS scheduler, dispatches jobs among DataNodes and
  * monitors their status. It reads configuration files to get parameters and
  * list of DataNode hostnames, creates local RMI registry and bind itself as
- * a service. 
+ * a service.
  *
- * The NameNode is able to recover from failures, periodically check the 
+ * The NameNode is able to recover from failures, periodically check the
  * status of DataNodes and the replication of file chunks, dispatch jobs like
- * read/write/remove files. It is capable of listing the information about 
+ * read/write/remove files. It is capable of listing the information about
  * DataNodes and files in the DFS.
  *
  * @author      Rui Zhang
@@ -35,16 +34,14 @@ import Common.Util;
  * @since       1.0
  */
 public class NameNode extends UnicastRemoteObject implements NameNodeI{
-    
+
     private static final long serialVersionUID = 7921414827247184085L;
 
     /* configuration file */
     private static String confPath = "conf/dfs.conf";
     
-    /* DataNode hostname list file */
+    /* datanode file */
     private static String dnPath = "conf/slaves";
-    
-    /* paremeters read from the configuration file */
     
     /* replication factor read from configuration file */
     private static Integer replicaFactor;
@@ -64,30 +61,29 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
     
     /* the dataNode's port number */
     private static Integer dataNodePort;
-    
+        
     /* datanode service name */
     private static String dataNodeServiceName;
     
     /* namenode tmp file path */
-    public static String nameNodePath;
-    
+    public static String nameNodePath
+    ;
     /* RMI registry on the NameNode*/
     public static Registry registry;
-
+    
     private static ExecutorService executor = Executors.newCachedThreadPool();
     
-    /** 
+    /**
      * constructor of NameNode class
-     * 
+     *
      * @since           1.0
      */
     public NameNode() throws RemoteException{
-    
     }
     
-    /** 
+    /**
      * recover the NameNode from local checkpoint
-     * 
+     *
      * @since           1.0
      */
     private void Init() {
@@ -108,10 +104,10 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
         if(obj != null)
             dfsScheduler.setNodeToFileNum((ConcurrentHashMap<String, Integer>) obj);
     }
-    
-    /** 
+
+    /**
      * create a checkThread to check the status of DataNedes in the DFS
-     * 
+     *
      * @since           1.0
      */
     public void checkDataNodes(){
@@ -122,13 +118,13 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
         }
     }
     
-    /** 
-     * check the replication status of file chunks, if the number 
-     * of replicas of a file chunk is smaller than the replication 
+    /**
+     * check the replication status of file chunks, if the number
+     * of replicas of a file chunk is smaller than the replication
      * factor (due to failure of DataNodes), it create a checkThread
-     * to write replicas of the file chunk in order to meet the 
+     * to write replicas of the file chunk in order to meet the
      * replication factor.
-     * 
+     *
      * @since           1.0
      */
     public void checkreplication() {
@@ -144,18 +140,20 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
                         candidates.add(datanode);
                     }
                 }
-                
-                /* 
+                /*
                  * make more replicas if the number of replica for a file chunk is smaller
                  * than replication factor, get the file from any residing DataNode.
                  */
                 if (cnt < replicaFactor) {
                     String res[] = dfsScheduler.chooseLight(replicaFactor - cnt, candidates);
+                    
                     if(candidates.size()==0)
                         break;
+                    
                     for (String r : res) {
                         if(r == null)
                             break;
+                        
                         checkThread t = new checkThread(r, dataRegPort, dataNodeServiceName);
                         t.setFilename(name);
                         t.setChunknumber(i);
@@ -168,14 +166,14 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
         }
     }
     
-    /** 
+    /**
      * pass the file chunk locations when writing a file to DFS, and record them in checkpoint
-     * 
+     *
      * @param filename  the name of the file to be written
      * @param num       the number of chunks
      * @return          the hashmap of chunk number and hashset of residing DataNodes
      * @since           1.0
-     */  
+     */
     @Override
     public Hashtable<Integer, HashSet<String>> writeFile(String filename, int num)
             throws RemoteException {
@@ -187,12 +185,13 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
             Util.checkpointFiles(nameNodePath+"tempfiles", dfsScheduler.getNodeToReplicas());
             Util.checkpointFiles(nameNodePath + "filenumber", dfsScheduler.getNodeToFileNum());
         }
+        
         return res;
     }
 
-    /** 
+    /**
      * pass the file chunk locations when opening a file in DFS
-     * 
+     *
      * @param filename  the file name of the file to open
      * @return          the hashmap of chunk number and hashset of residing DataNodes
      * @since           1.0
@@ -200,13 +199,14 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
     @Override
     public Hashtable<Integer, HashSet<String>> open(String filename)
             throws RemoteException {
-        /* get the locations of file chunks from DFS scheduler */
+
+        /* TaskTacker call this method to get the files' relica places */
         return dfsScheduler.openFile(filename);
     }
-    
-    /** 
+
+    /**
      * update local information and checkpoint according to if a write succeeded
-     * 
+     *
      * @param filename  the file name of the file to open
      * @param res       true if write succeeded, false
      * @return          the hashmap of chunk number and hashset of residing DataNodes
@@ -227,14 +227,16 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
         Util.checkpointFiles(nameNodePath+"tempfiles", dfsScheduler.getTempFiles());
     }
     
-    /** 
+    /**
      * read the hostnames of DataNodes from file and pass them to DFS scheduler
-     * 
+     *
      * @param filename  the name of the file containing the DataNode hostnames
      * @since           1.0
      */
     public static void readDataNodes(String filename) throws UnsupportedEncodingException {
-        String content = new String(Util.readFromFile(filename), "UTF-8");
+        
+        String    content = new String(Util.readFromFile(filename), "UTF-8");
+        
         String lines[] = content.split("\n");
         for(int i = 0; i < lines.length; i++) {
             dfsScheduler.getStatus().put(lines[i], false);
@@ -243,15 +245,16 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
         }
     }
     
-    /** 
+    /**
      * a timer periodically checking the status of DataNodes and the replication
      * of file chunks; period is 5 seconds since start of NameNode
-     * 
+     *
      * @since           1.0
      */
     private void checkTimer() {
         Timer check = new Timer();
         check.scheduleAtFixedRate (new TimerTask(){
+            
             @Override
             public void run() {
                 checkDataNodes();
@@ -260,13 +263,13 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
         },0, 5000);
     }
     
-    /** 
+    /**
      * The main function on the NameNode. It reads the configuration file
-     * and DataNode list, recovers from local checkpoint, creates a local 
+     * and DataNode list, recovers from local checkpoint, creates a local
      * RMI registry and binds the DataNode on the registry as a service,
-     * periodically checks the status of DataNodes and the replication of 
+     * periodically checks the status of DataNodes and the replication of
      * file chunks.
-     * 
+     *
      * @param args      no arguments needed, parameters can be written in the configuration file
      * @since           1.0
      */
@@ -275,7 +278,8 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
         try
         {
              NameNode server = new NameNode();
-             Util.readConfigurationFile(confPath, server);     
+             Util.readConfigurationFile(confPath, server);
+                          
              readDataNodes(dnPath);
              server.Init();
              
@@ -285,8 +289,11 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
              
              unexportObject(server, false);
              NameNodeI stub = (NameNodeI) exportObject(server, nameNodePort);
+             
              registry = LocateRegistry.createRegistry(nameRegPort);
+             //registry.rebind(registryHostname + "/" + nameNodeServiceName, stub);
              registry.rebind(nameNodeServiceName, stub);
+             
              System.out.println ("NameNode ready!");
              
              server.checkTimer();
@@ -294,13 +301,14 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
         catch (Exception e)
         {
             e.printStackTrace();
+
             System.out.println("Exception happened when starting the namenode!");
         }
     }
-    
-    /** 
+
+    /**
      * list all of the files stored on the DFS, along with locations of file chunks
-     * 
+     *
      * @return          the hashmap of filenames and the hashmap of chunk number and residing DataNodes
      * @since           1.0
      */
@@ -309,9 +317,9 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
         return dfsScheduler.getFiles();
     }
 
-    /** 
+    /**
      * list all of the DataNodes and the file chunks on the DataNodes
-     * 
+     *
      * @return          the hashmap of DataNode and residing file chunks
      * @since           1.0
      */
@@ -321,23 +329,25 @@ public class NameNode extends UnicastRemoteObject implements NameNodeI{
         return dfsScheduler.getNodeToReplicas();
     }
 
-    /** 
+    /**
      * remove a file from DFS
-     * 
+     *
      * @param filename      the name of the file to be removed
      * @since               1.0
      */
     @Override
     public void removeFile(String filename) throws RemoteException {
         dfsScheduler.removeFile(filename);        
+        
         Util.checkpointFiles(nameNodePath+"files", dfsScheduler.getFiles());
         Util.checkpointFiles(nameNodePath+"nodeToReplicas", dfsScheduler.getNodeToReplicas());
         Util.checkpointFiles(nameNodePath + "filenumber", dfsScheduler.getNodeToFileNum());
+
     }
 
-    /** 
+    /**
      * check if a file is in the DFS
-     * 
+     *
      * @param filename      the name of the file to find
      * @return              true if the file exists in DFS; false otherwise
      * @since               1.0

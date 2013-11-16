@@ -7,14 +7,13 @@ import java.util.HashSet;
 import Common.dfsScheduler;
 import Common.Util;
 
-
 /**
  * checkThread is the class running as a thread of the NameNode.
- * It can periodically check the status of DataNode. Also, it can 
- * write a replica of the file chunk on a specified DataNode in 
+ * It can periodically check the status of DataNode. Also, it can
+ * write a replica of the file chunk on a specified DataNode in
  * order to satisfy replication factor (when some DataNode fails
  * and the number of replicas is smaller than replication factor).
- * 
+ *
  * @author      Rui Zhang
  * @author      Jing Gao
  * @version     1.0, 11/12/2013
@@ -23,17 +22,23 @@ import Common.Util;
 public class checkThread implements Runnable{
 
     private String dnode;
+    //private int dnodeport;
     private int registryPort;
     private String serviceName;
+    
     private OP op;
+
     private String filename;
+    
     private int chunknumber;
+
     private HashSet<String> nodes;
+
     public enum OP  {WRITE, STATUS, DELETE};
     
-    /** 
+    /**
      * constructor of checkThread class
-     * 
+     *
      * @param dn        the hostname of the DataNode to be operated
      * @param rp        the registry port number on the DataNode
      * @param sname     the RMI service name
@@ -42,6 +47,7 @@ public class checkThread implements Runnable{
     public checkThread(String dn, int rp, String sname)
     {
         dnode = dn;
+        //dnodeport = dnp;
         registryPort=rp;
         serviceName = sname;
     }
@@ -118,15 +124,21 @@ public class checkThread implements Runnable{
         boolean status = false;
         try {
             Registry dnRegistry=LocateRegistry.getRegistry(dnode,registryPort);
+            //DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(dnode+"/"+serviceName);
             DataNodeI datanode = (DataNodeI) dnRegistry.lookup(serviceName);
             status = datanode.heartBeat();
+            
+            
         } catch (Exception e) {
+            // TODO Auto-generated catch block
             if (e instanceof java.rmi.NotBoundException) {
                 System.out.println("Datanode "+dnode+" not startup.");
             }
+            
             else if(e instanceof java.rmi.ConnectException){
                 
             }
+            
             else {
                 e.printStackTrace();
             }
@@ -138,20 +150,23 @@ public class checkThread implements Runnable{
     /**
      * write a file chunk replica to the specified DataNode, and then
      * update the information on DFS scheduler and checkpoint on NameNode
-     * 
+     *
      * @since           1.0
      */
     private void write() {
         try {
             Registry dnRegistry=LocateRegistry.getRegistry(dnode,registryPort);
+            //DataNodeI datanode = (DataNodeI) NameNode.registry.lookup(dnode+"/"+serviceName);
             DataNodeI datanode = (DataNodeI) dnRegistry.lookup(serviceName);
             
-            /* get hostnames array of the residing DataNodes for the file chunk */
             String[] temp = new String[nodes.size()];
+            
             int cnt = 0;
+            
             for(String n : nodes) {
                 if(n == dnode)
                     continue;
+                
                 temp[cnt] = n;
                 cnt++;
             }
@@ -160,24 +175,24 @@ public class checkThread implements Runnable{
                 return;
             }
             
-            /* write a file chunk replica to the specified DataNode */
             boolean res = datanode.replication(filename + "-" + chunknumber, temp);
-            if (res) {
             
-                /* update the information on DFS scheduler */
+            if (res) {
                 dfsScheduler.replication(filename, chunknumber, dnode);
-                
                 /* checkpoint */
                 Util.checkpointFiles(NameNode.nameNodePath + "files", dfsScheduler.getFiles());
                 Util.checkpointFiles(NameNode.nameNodePath+"nodeToReplicas", dfsScheduler.getNodeToReplicas());
             }
+            
         } catch (Exception e) {
             if (e instanceof java.rmi.NotBoundException) {
                 System.out.println("Datanode "+dnode+" not startup.");
             }
+            
             else if(e instanceof java.rmi.ConnectException){
                 
             }
+            
             else {
                 e.printStackTrace();
             }
@@ -187,30 +202,29 @@ public class checkThread implements Runnable{
     /**
      * delete a file chunk replica on the specified DataNode, and then
      * update the information on DFS scheduler and checkpoint on NameNode
-     * 
+     *
      * @since           1.0
      */
     private void delete() {
         try {
             Registry dnRegistry=LocateRegistry.getRegistry(dnode,registryPort);
             DataNodeI datanode = (DataNodeI) dnRegistry.lookup(serviceName);
-            
-            /* delete a file chunk replica on the specified DataNode */
             datanode.removeFile(filename + "-" + chunknumber);
             
-            /* update the information on DFS scheduler */
             dfsScheduler.removeReplica(filename, chunknumber, dnode);
-            
             /* checkpoint */
             Util.checkpointFiles(NameNode.nameNodePath+"files", dfsScheduler.getFiles());
             Util.checkpointFiles(NameNode.nameNodePath+"nodeToReplicas", dfsScheduler.getNodeToReplicas());
+
         } catch (Exception e) {
             if (e instanceof java.rmi.NotBoundException) {
                 System.out.println("Datanode "+dnode+" not startup.");
             }
+            
             else if(e instanceof java.rmi.ConnectException){
                 
             }
+            
             else {
                 e.printStackTrace();
             }

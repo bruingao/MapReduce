@@ -48,9 +48,6 @@ import Common.jobScheduler;
  */
 public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
 
-    /**
-     * 
-     */
     private static final long serialVersionUID = 5442874947046318711L;
     
     private static final String confPath = "conf/mapred.conf";
@@ -153,20 +150,6 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
     private static ConcurrentHashMap<Integer, Integer> jobToFailTimes
         = new ConcurrentHashMap<Integer, Integer>();
     
-    public enum JOB_RESULT {FAIL, SUCCESS, INPROGRESS};
-    
-    public enum NOTIFY_RESULT {FAIL, SUCCESS, DATANODE_FAIL, TASKNODE_FAIL};
-    
-    /** 
-     * constructor of JobTracker
-     * 
-     * @since           1.0
-     */
-    protected JobTracker() throws RemoteException {
-        super();
-        gjobid = 0;
-    }
-    
     /** 
      * check status of TaskTrackers and reschedule if failure is found
      * 
@@ -181,13 +164,20 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
                 jobScheduler.nodeStatus.put(node, status);
                 
             } catch (Exception e) {
+                System.out.println("node failure!");
                 jobScheduler.nodeStatus.put(node, false);
-                HashSet<Integer> mapjobs = jobScheduler.nodeToMapJobs.get(node);
+                HashSet<Integer> mapjobs = new HashSet<Integer>(jobScheduler.nodeToMapJobs.get(node));
+
                 for (int jid : mapjobs) {
+                    
+                    System.out.println("recovering node failure!");
+
                     
                     /* choose a new task tracker and extract the failed chunks */
                     Pair newNode = jobScheduler.mapperFail(jid, node, null);
                     /* new task tracker */
+                    
+                    System.out.println("newNode" + newNode.name);
                     
                     if(newNode == null) {
                         jobStatus.put(jid, false);
@@ -205,7 +195,10 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
                     executor.execute(t);
                 }
                 
-                HashSet<Pair> reduceJobs = jobScheduler.nodeToReduceJobs.get(node);
+                System.out.println("recovery mapper succeed!");
+
+                
+                HashSet<Pair> reduceJobs = new HashSet<Pair>(jobScheduler.nodeToReduceJobs.get(node));
                 
                 for(Pair pair : reduceJobs) {
                     /* reducer fail */
@@ -259,7 +252,19 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
             Util.writeObject(idPath, gjobid);
         }
     }
-
+    
+    /** 
+     * constructor of JobTracker
+     * 
+     * @since           1.0
+     */
+    protected JobTracker() throws RemoteException {
+        super();
+        gjobid = 0;
+    }
+    
+    public enum JOB_RESULT {FAIL, SUCCESS, INPROGRESS};
+    
     /** 
      * accept jobs submitted by users, open jobThreads to
      * push the tasks to TaskTrackers
@@ -269,7 +274,7 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
      * @param reducer   reducer class info
      * @return          status string
      * @since           1.0
-     */      
+     */ 
     @Override
     public String submitJob(JobConf conf, Pair mapper, Pair reducer) throws RemoteException {
         /* check output file name, if exists return OUTPUTEXISTS */
@@ -291,10 +296,7 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
         /* write the class to corresponding file (in order for task nodes to read */
         Integer jid = gjobid;
         increaseId();
-        
-        
-        
-        
+
         /* call open method of dfs namenode and get the corresponding metadata */
         Hashtable<Integer, HashSet<String>> filechunks = namenode.open(conf.getInputfile());
         
@@ -312,12 +314,11 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
         
         Util.writeBinaryToFile((byte[])mapper.content, mapperPath);
         Util.writeBinaryToFile((byte[])reducer.content, reducerPath);
-        
+
         /* store the path of the calss file and the input and output file path */        
         mappers.put(jid, mapperPath);
         reducers.put(jid, reducerPath);
-        
-        
+                
         
         mappername.put(jid, (String)mapper.name);
         reducername.put(jid, (String)reducer.name);
@@ -333,7 +334,7 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
             jobThread t = new jobThread(node, jid, conf, mapperToChunks.get(node), null, true, -1);
             
             executor.execute(t);
-
+            
         }
         
         jobStatus.put(jid, true);
@@ -342,14 +343,14 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
         
         return jid.toString();
     }
-    
+
     /** 
      * check the status of an accepted job
      * 
      * @param jid       the job id
      * @return          job result
      * @since           1.0
-     */  
+     */ 
     @Override
     public JOB_RESULT checkStatus(Integer jobid) throws RemoteException {
         /* check the status if fail return fail */
@@ -363,7 +364,7 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
         else 
             return JOB_RESULT.INPROGRESS;
     }
-    
+
     /** 
      * check the progress of mappers of an accepted job
      * 
@@ -377,7 +378,7 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
     
         return jobScheduler.getMapperPercent(jobid);
     }
-    
+
     /** 
      * check the progress of reducers of an accepted job
      * 
@@ -391,7 +392,7 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
         
         return jobScheduler.getReducerPercet(jobid);
     }
-    
+
     /** 
      * read mapper class info of a job
      * 
@@ -423,6 +424,7 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
         return pair;
     }
     
+    public enum NOTIFY_RESULT {FAIL, SUCCESS, DATANODE_FAIL, TASKNODE_FAIL};
     
     /** 
      * accept mapper result notifications
@@ -509,10 +511,14 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
                 /* failed chunks and corresponding datanode */
                 Hashtable<Integer, String> failChunk = (Hashtable<Integer, String>) newNode.content;
                 
-                Registry reg = LocateRegistry.getRegistry(opNode, taskRegPort);
+                jobThread t = new jobThread(opNode, jid, confs.get(jid), failChunk, null, true, -1);
                 
-                TaskTrackerI tasktracker = (TaskTrackerI) reg.lookup(taskServiceName);
-                tasktracker.pushMapTask(jid, confs.get(jid), failChunk);
+                executor.execute(t);
+                
+//                Registry reg = LocateRegistry.getRegistry(opNode, taskRegPort);
+//                
+//                TaskTrackerI tasktracker = (TaskTrackerI) reg.lookup(taskServiceName);
+//                tasktracker.pushMapTask(jid, confs.get(jid), failChunk);
                 
             } catch (NotBoundException e) {
                 e.printStackTrace();
@@ -582,15 +588,15 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
                 return;
             }
             
-            Registry reg = LocateRegistry.getRegistry(newNode, taskRegPort);
+            System.out.println("newNode" + newNode);
+
             
-            TaskTrackerI tasktracker = null;
-            try {
-                tasktracker = (TaskTrackerI) reg.lookup(taskServiceName);
-            } catch (NotBoundException e) {
-                e.printStackTrace();
-            }
-            tasktracker.pushReduceTask(jid, confs.get(jid), mapperTrackers, partition);
+            jobThread t = new jobThread(newNode, jid, confs.get(jid), 
+                    null, mapperTrackers, false, partition);
+            
+            executor.execute(t);
+            
+//            tasktracker.pushReduceTask(jid, confs.get(jid), mapperTrackers, partition);
             
             System.out.println("reduce "+jid+" partition "+partition+" continues on node "+tnode);
         } else if (res == NOTIFY_RESULT.TASKNODE_FAIL) {
@@ -627,7 +633,6 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
         
         jobStatus.remove(jid);
     }
-    
     
     /** 
      * the main function of JobTracker, read configuration files,
@@ -675,7 +680,7 @@ public class JobTracker extends UnicastRemoteObject implements JobTrackerI {
             System.out.println("Exception happend when running the JobTracker!");
         }
     }
-    
+
     /** 
      * terminate a job
      * 

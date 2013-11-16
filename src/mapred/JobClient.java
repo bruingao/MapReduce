@@ -9,7 +9,6 @@ import mapred.JobTracker.JOB_RESULT;
 import Common.Pair;
 import Common.Util;
 
-
 /**
  * JobClient is client side program which can be running on
  * a machine outside of the MapReduce framework. It will set
@@ -72,7 +71,7 @@ public class JobClient {
      * 
      * @param conf      configurations
      * @since           1.0
-     */  
+     */
     public void runJob(JobConf conf) throws RemoteException{
         /* read configuration file */
         JobClient jobclient = new JobClient();

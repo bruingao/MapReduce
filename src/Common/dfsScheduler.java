@@ -45,9 +45,9 @@ public final class dfsScheduler {
     private static ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>> tempFiles
         = new ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>>();
     
-    /** 
+    /**
      * set info about DFS files
-     * 
+     *
      * @param files     file chunks and their locations
      * @since           1.0
      */
@@ -55,31 +55,31 @@ public final class dfsScheduler {
             ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>> files) {
         dfsScheduler.files = files;
     }
-    
-    /** 
-     * set info about DFS files
-     * 
-     * @param files     file chunks and their locations
-     * @since           1.0
+
+    /**
+     * set info about DFS nodes and file replicas on them
+     *
+     * @param nodeToReplicas    nodes and the replicas on them
+     * @since                   1.0
      */
     public static void setNodeToReplicas(
             ConcurrentHashMap<String, HashSet<String>> nodeToReplicas) {
         dfsScheduler.nodeToReplicas = nodeToReplicas;
     }
-    
-    /** 
+
+    /**
      * set info about node status
-     * 
+     *
      * @param status    nodes and their status
      * @since           1.0
      */
     public static void setStatus(ConcurrentHashMap<String, Boolean> status) {
         dfsScheduler.status = status;
     }
-    
-    /** 
+
+    /**
      * set info about DFS temp files
-     * 
+     *
      * @param tempFiles     file chunks and their locations
      * @since           1.0
      */
@@ -88,26 +88,26 @@ public final class dfsScheduler {
         dfsScheduler.tempFiles = tempFiles;
     }
 
-    /** 
+    /**
      * constructor of dfsScheduler class
-     * 
+     *
      * @since           1.0
      */
     private dfsScheduler(){}
     
-    /** 
+    /**
      * get info about DFS files
-     * 
+     *
      * @return          file chunks and their locations
      * @since           1.0
      */
     public static ConcurrentHashMap<String, Hashtable<Integer, HashSet<String>>> getFiles() {
         return files;
     }
-    
-    /** 
+
+    /**
      * get info about DFS temp files
-     * 
+     *
      * @return          temp file chunks and their locations
      * @since           1.0
      */
@@ -115,9 +115,9 @@ public final class dfsScheduler {
         return tempFiles;
     }
     
-    /** 
+    /**
      * get info about DFS nodes and replicas on them
-     * 
+     *
      * @return          nodes and their replicas
      * @since           1.0
      */
@@ -125,9 +125,9 @@ public final class dfsScheduler {
         return nodeToReplicas;
     }
     
-    /** 
+    /**
      * get info about DFS nodes status
-     * 
+     *
      * @return          nodes and their status
      * @since           1.0
      */
@@ -140,9 +140,9 @@ public final class dfsScheduler {
         return files.get(filename);
     }
     
-    /** 
+    /**
      * check if a file exists in DFS
-     * 
+     *
      * @param filename  destination file name
      * @return          true if file exists in DFS; false otherwise
      * @since           1.0
@@ -207,10 +207,11 @@ public final class dfsScheduler {
      * @return          nodes and their storage loads
      * @since           1.0
      */
+
     public static ConcurrentHashMap<String, Integer> getNodeToFileNum() {
         return nodeToFileNum;
     }
-    
+
     /**
      * set number of file chunks on each node
      *
@@ -283,10 +284,10 @@ public final class dfsScheduler {
             return null;
         
         Hashtable<Integer, HashSet<String>> res = 
-                new Hashtable<Integer, HashSet<String>> ();
+                new Hashtable<Integer, HashSet<String>> (temp);
         
-        for (int chunk : res.keySet()) {
-            for (String node :res.get(chunk)) {
+        for (int chunk : temp.keySet()) {
+            for (String node :temp.get(chunk)) {
                 if(!status.get(node)) {
                     res.get(chunk).remove(node);
                 }
@@ -386,6 +387,7 @@ public final class dfsScheduler {
      * @param filename  the name of file
      * @since           1.0
      */
+
     public static void deleteTemp(String filename) {
         for(int chunk : tempFiles.get(filename).keySet()) {
             for (String node : tempFiles.get(filename).get(chunk)) {
@@ -402,6 +404,7 @@ public final class dfsScheduler {
      * @param filename  the name of file
      * @since           1.0
      */
+
     public static void removeFile(String filename) {
         for(Integer c : files.get(filename).keySet()) {
             for (String node : files.get(filename).get(c)) {

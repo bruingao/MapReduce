@@ -14,7 +14,7 @@ import java.io.Serializable;
  * @since       1.0
  */
 public class JobConf implements Serializable{
-    
+
     private static final long serialVersionUID = 870609109352931265L;
     
     private Class<?> mapperClass;

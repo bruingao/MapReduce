@@ -13,9 +13,9 @@ import java.util.*;
  */
 public final class Partitioner {
     
-    /** 
+    /**
      * constructor of Partitioner class
-     * 
+     *
      * @since           1.0
      */
     public Partitioner()
@@ -23,42 +23,42 @@ public final class Partitioner {
 
     }
     
-    /** 
+    /**
      * partition collection into specified number of partitions
-     * 
+     *
      * @param collection    kv pair list
      * @param uniqueKeys    hash set of unique keys, facilitating partitioning
      * @param partitionNum  desired partition number
      * @return              string array of partitions
      * @since               1.0
      */
-    public static StringBuffer[] partition(List<Pair> collection, HashSet<Object> uniqueKeys, Integer partitionNum){
+    public static StringBuffer[] partition(SortedMap<Object, ArrayList<Object>> collection, Integer partitionNum){
         
         System.out.println("begin partition");
         
         HashMap<Object, Object> keyHashcode=new HashMap<Object,Object>();
         StringBuffer[] partitions=new StringBuffer[partitionNum];
         
-        System.out.println("collection: "+collection.size());
-        System.out.println("uniqueKeys: "+uniqueKeys.size());
+        System.out.println("uniqueKeys: "+collection.size());
         
         for (int i=0;i<partitionNum;i++)
             partitions[i] = new StringBuffer("");
         
-        for (Object key:uniqueKeys){
+        for (Object key: collection.keySet()){
             keyHashcode.put(key,(key.hashCode())%partitionNum);
         }
         
-        for (Pair pair : collection){
-            int index=(int) keyHashcode.get(pair.name);
-            
-            partitions[index].append(pair.name);
-            partitions[index].append(" ");
-            partitions[index].append(pair.content);
-            partitions[index].append("\n");
+        for (Object key : collection.keySet()){
+            int index=(int) keyHashcode.get(key);
+            for(Object value : collection.get(key)) {
+                partitions[index].append(key);
+                partitions[index].append(" ");
+                partitions[index].append(value);
+                partitions[index].append("\n");
+            }
             
         }
-
+        
         return partitions;
     }
 

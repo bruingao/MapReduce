@@ -3,10 +3,9 @@ package dfs;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
-
 /**
  * DataNodeI is the interface for DataNodes. It defines interfaces to
- * read from local file chunk, write to a local file chunk, remove local 
+ * read from local file chunk, write to a local file chunk, remove local
  * file chunk, respond to heartbeat status check, create a replica of
  * file chunk.
  *
@@ -16,7 +15,6 @@ import java.rmi.RemoteException;
  * @since       1.0
  */
 public interface DataNodeI extends Remote{
-
     /* read from local file chunk and return the content as byte array */
     public byte[] read(String filename) throws RemoteException;
     

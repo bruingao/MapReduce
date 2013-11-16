@@ -38,7 +38,7 @@ public class jobThread implements Runnable{
     
     /* which partition*/
     private int whichPartition;
-    
+        
     /** 
      * constructor of jobThread class
      *
@@ -62,7 +62,7 @@ public class jobThread implements Runnable{
         this.interNodes = interNodes;
         this.whichPartition = wp;
     }
-    
+
     /** 
      * thread runner, push task to corresponding node
      *

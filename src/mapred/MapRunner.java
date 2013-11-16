@@ -19,6 +19,7 @@ import Common.Partitioner;
 import dfs.DataNodeI;
 import format.inputFormatAbs;
 
+
 /**
  * MapRunner is the process runner of the parallel mapper tasks.
  * They work on the TaskTracker host machine as parallel processes,
@@ -36,7 +37,7 @@ import format.inputFormatAbs;
 public class MapRunner {
     
     private static Mapper mapper;
-    
+
     /** 
      * get the mapper class
      * 
@@ -46,7 +47,7 @@ public class MapRunner {
     public static Mapper getMapper() {
         return mapper;
     }
-    
+
     /** 
      * set the mapper class
      * 
@@ -66,9 +67,6 @@ public class MapRunner {
      */
     public static void main(String[] args) {
         /* mapper classname, jobid, num of partitions, partitionPath, numOfChunks, inputfile, chunks, datanodeHost, regPort, datanode service name */
-        
-        for(int i = 0;i <args.length;i++)
-            System.out.println(args[i]);
         
         String mapperName = args[0];
         
@@ -93,7 +91,7 @@ public class MapRunner {
         }
         
         
-        System.out.println("phase 1:succeed!");
+//        System.out.println("phase 1:succeed!");
         
         try {
             Class<Mapper> ma = (Class<Mapper>) Class.forName(mapperName);
@@ -102,7 +100,7 @@ public class MapRunner {
             
             mapper = cma.newInstance();
             
-            System.out.println("phase 2:succeed!");
+//            System.out.println("phase 2:succeed!");
             
             String content[] = new String[numOfChunks];
             
@@ -116,8 +114,8 @@ public class MapRunner {
             
             for (int ck : chunks) {
                 String datanodeHost = args[7 + numOfChunks + c];                
-                System.out.println("datanodeHostname: "+datanodeHost);
-                System.out.println("service name: "+service);
+//                System.out.println("datanodeHostname: "+datanodeHost);
+//                System.out.println("service name: "+service);
                 Registry reg = LocateRegistry.getRegistry(datanodeHost, regPort);
                 DataNodeI datanode = (DataNodeI)reg.lookup(service);
                 content[c] = new String(datanode.read(filename+"-"+ck),"UTF-8");
@@ -138,7 +136,7 @@ public class MapRunner {
                         
             //collector.sortStringKey();
             
-            StringBuffer pContents[] = Partitioner.partition(collector.collection,collector.uniqueKeys, numPartitions);
+            StringBuffer pContents[] = Partitioner.partition(collector.collection,numPartitions);
             
             //System.out.println(pContents.length);
             
@@ -154,7 +152,7 @@ public class MapRunner {
                 //System.out.println(partitions[i]);
             }
             
-            System.out.println("phase 4:succeed!");
+//            System.out.println("phase 4:succeed!");
             
         } catch (RemoteException e) {
             e.printStackTrace();

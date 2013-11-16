@@ -1,5 +1,11 @@
 package mapred;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -13,6 +19,8 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.HashSet;
 import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import dfs.DataNodeI;
 import dfs.NameNodeI;
@@ -22,6 +30,7 @@ import format.outputFormat;
 import Common.Collector;
 import Common.Pair;
 import Common.Util;
+
 
 /**
  * ReduceRunner is the process runner of the parallel reducer tasks.
@@ -92,11 +101,14 @@ public class ReduceRunner {
         /* intermediate nodes size */
         int nSize = Integer.parseInt(args[13]);
         
+        /* intermediate file path */
+        String interPath = args[14];
+        
         /* all the nodes having intermediate files */
         String nodes[] = new String[nSize];
         
         for(int i = 0; i <nSize; i++) {
-            nodes[i] = args[14 + i];
+            nodes[i] = args[15 + i];
         }
         
         Collector collector = new Collector();
@@ -107,8 +119,9 @@ public class ReduceRunner {
             Constructor<Reducer> constructor = rd.getConstructor();
             
             reducer = constructor.newInstance();
-            
-            String contents[] = new String[nSize];
+                        
+            ArrayList<HashMap<String, ArrayList<String>>> kvPairs 
+            = new ArrayList<HashMap<String, ArrayList<String>>>();
             
             for(int i = 0; i < nSize; i++){
                 /* read intermediate file */
@@ -116,48 +129,70 @@ public class ReduceRunner {
                 
                 TaskTrackerI tasktracker = (TaskTrackerI) reg.lookup(taskService);
                 
-                contents[i] = tasktracker.getInterFiles(jid, partition);
+                String content = tasktracker.getInterFiles(jid, partition);
                 
-//                System.out.println("content file "+i+": "+contents[i]);
                 
-                /* if read error return -1, reducer fail */
-                if(contents[i] == null)
-                    System.exit(-1);
+                Util.writeBinaryToFile(content.getBytes("UTF-8"), interPath+jid+"-tasktracker"+"-"+i+"-"+partition);
+
             }
             
-            ArrayList<HashMap<String, ArrayList<String>>> kvPairs 
-                = new ArrayList<HashMap<String, ArrayList<String>>>();
+            String currentLine[] = new String[nSize];
+            String values[] = new String[nSize];
+            SortedSet<String> orders = new TreeSet<String>();
             
-            /* do reduce job */
-            for (String content : contents) {
-                if(content.equals("") || content == null)
+            InputStreamReader isr[] = new InputStreamReader[nSize];
+            BufferedReader br[] = new BufferedReader[nSize];
+            FileInputStream in[] = new FileInputStream[nSize];
+            for(int i = 0;i<nSize;i++) {
+                in[i] = new FileInputStream(interPath+jid+"-tasktracker"+"-"+i+"-"+partition);
+                isr[i] = new InputStreamReader(in[i]);
+                br[i] = new BufferedReader(isr[i]);
+                
+                String temp = br[i].readLine();
+                if (temp==null)
                     continue;
-                kvPairs.add(Util.parseStr(content));
+                String lines[] = temp.split(" ");
+                currentLine[i] = lines[0];
+                values[i] = lines[1];
+                orders.add(currentLine[i]);
             }
             
-            if(kvPairs.size() == 0)
+            if(orders.size()==0)
                 return;
             
-            ArrayList<HashMap<String, ArrayList<String>>> newPairs 
-            = new ArrayList<HashMap<String, ArrayList<String>>>();
-            while (kvPairs.size()>1) {
-                int i;
-                for(i = 0;i*2+1 < kvPairs.size(); i++) {
-                    newPairs.add(Util.mergeArray(kvPairs.get(i*2), kvPairs.get(i*2+1)));
+            while(true) {
+                if(orders.size()==0)
+                    break;
+                ArrayList<String> list = new ArrayList<String>();
+                String minStr = orders.first();
+                
+                System.out.println(partition+": "+minStr);
+                for (int i = 0;i<nSize;i++) {
+                    System.out.println(i+": "+currentLine[i]);
                 }
-                if(i*2+1 == kvPairs.size()) {
-                    newPairs.add(kvPairs.get(i*2));
+                
+                for (int i = 0;i<nSize;i++){
+                    while (currentLine[i] != null && currentLine[i].equals(minStr)) {
+                        list.add(values[i]);
+                        String temp = br[i].readLine();
+                        if (temp != null) {
+                            String lines[] = temp.split(" ");
+                            currentLine[i] = lines[0];
+                            values[i] = lines[1];
+                        } else {
+                            currentLine[i] = null;
+                        }
+                    }
                 }
-                kvPairs = newPairs;
-                newPairs = new ArrayList<HashMap<String, ArrayList<String>>>();
+                orders.remove(minStr);
+                for (int i = 0;i<nSize;i++){
+                    if(currentLine[i] == null)
+                        continue;
+                    orders.add(currentLine[i]);
+                }
+                if(list.size() > 0)
+                    reducer.reduce(minStr, list, collector);
             }
-            
-            HashMap<String, ArrayList<String>> values = kvPairs.get(0);
-            
-            for(String key : values.keySet()) {
-                reducer.reduce(key, values.get(key), collector);
-            }
-            
             
         } catch (RemoteException e) {
             e.printStackTrace();
@@ -171,11 +206,11 @@ public class ReduceRunner {
         } 
         
         /* transform the computed partition to a string, ready to write to dfs */
-        outputFormat output = new outputFormat(collector.collection);
+        outputFormat output = new outputFormat();
         
         byte[] result = null;
         try {
-            result = output.getOutput().toString().getBytes("UTF-8");
+            result = output.getOutput(collector).toString().getBytes("UTF-8");
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
             System.exit(1);
@@ -248,6 +283,17 @@ public class ReduceRunner {
             System.exit(1);
         }
         
+    }
+    
+    /** 
+     * read line from buffered reader
+     * 
+     * @param br        the buffered reader
+     * @return          the line read
+     * @since           1.0
+     */
+    private String readline(BufferedReader br) throws IOException {
+        return br.readLine();
     }
 
 }

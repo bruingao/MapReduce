@@ -16,21 +16,21 @@ public class Pair implements Serializable{
     public Object name;
     public Object content;
     
-    /** 
+    /**
      * constructor of DataNode class
-     * 
+     *
      * @param n         the key (name) object
      * @param c         the value (content) object
      * @since           1.0
-     */    
+     */
     public Pair(Object n, Object c) {
         name = n;
         content = c;
     }
     
-    /** 
+    /**
      * determine if two pairs are equal
-     * 
+     *
      * @param e         destination pair to be compared with self
      * @return          true if equal; false otherwise
      * @since           1.0

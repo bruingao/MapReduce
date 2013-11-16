@@ -6,7 +6,6 @@ import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.concurrent.ConcurrentHashMap;
 
-
 /**
  * NameNodeI is the interface for NameNode. It defines interfaces to
  * get the locations of chunks when opening file, get the locations of
@@ -20,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since       1.0
  */
 public interface NameNodeI extends Remote{
-
+    
     /* pass the locations of chunks when opening a file in DFS */
     public Hashtable<Integer, HashSet<String>> open(String filename) throws RemoteException;
     
