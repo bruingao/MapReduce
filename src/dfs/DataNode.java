@@ -1,5 +1,6 @@
 package dfs;
 
+import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.rmi.NotBoundException;
