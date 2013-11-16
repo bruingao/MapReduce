@@ -22,6 +22,7 @@ public class sumVal {
 		try {
 			jobclient.runJob(conf);
 		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

@@ -65,7 +65,7 @@ public class Collector {
     }
     
     /** 
-     * sort collection according to key, taking key as string
+     * sort collection according to key, taking key as String
      * 
      * @since               1.0
      */
@@ -82,11 +82,6 @@ public class Collector {
         Collections.sort(this.collection, new intKeyComparator());
     }
     
-    /** 
-     * comparator for sorting collection according to key, taking key as string
-     * 
-     * @since               1.0
-     */
     public class stringKeyComparator implements Comparator<Pair> {
         public int compare(Pair kvPair1, Pair kvPair2) {
             if (((String) kvPair1.name).hashCode() > ((String) kvPair2.name).hashCode()){
@@ -97,11 +92,6 @@ public class Collector {
         }
     }
     
-    /** 
-     * comparator for sorting collection according to key, taking key as integer
-     * 
-     * @since               1.0
-     */
     public class intKeyComparator implements Comparator<Pair> {
         public int compare(Pair kvPair1, Pair kvPair2) {
             if (Integer.parseInt((String)kvPair1.name)>Integer.parseInt((String)kvPair2.name)){

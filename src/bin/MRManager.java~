@@ -171,8 +171,7 @@ public class MRManager {
                 namenode.writeSucess(filename, true);
                 
                 break;
-            
-            /* remove a file in DFS */
+                
             case "remove":
                 if(cmds.length < 3) {
                     System.out.println("Please indicate the file name");
