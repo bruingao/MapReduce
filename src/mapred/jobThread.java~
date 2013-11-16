@@ -8,17 +8,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Hashtable;
 
-
-/**
- * jobThread is the thread running on JobTracker.
- * It pushes mapper/reducer tasks to specified 
- * TaskTracker.
- *
- * @author      Rui Zhang
- * @author      Jing Gao
- * @version     1.0, 11/12/2013
- * @since       1.0
- */
 public class jobThread implements Runnable{
 	
 	private String node;
@@ -38,19 +27,7 @@ public class jobThread implements Runnable{
 	
 	/* which partition*/
 	private int whichPartition;
-	
-	/** 
-     * constructor of jobThread class
-     *
-     * @param node          destination node
-     * @param jid           job id
-     * @param conf          configurations of job
-     * @param chunks        task related file chunks
-     * @param interNodes    set of intermediate nodes
-     * @param flag          true if task is a mapper; false if reducer
-     * @param wp            partition number 
-     * @since               1.0
-     */
+		
 	public jobThread(String node, int jid, JobConf conf,
 			Hashtable<Integer, String> chunks, HashSet<String> interNodes, boolean flag, int wp) {
 		super();
@@ -62,12 +39,7 @@ public class jobThread implements Runnable{
 		this.interNodes = interNodes;
 		this.whichPartition = wp;
 	}
-    
-    /** 
-     * thread runner, push task to corresponding node
-     *
-     * @since               1.0
-     */
+
 	@Override
 	public void run() {
 		try {

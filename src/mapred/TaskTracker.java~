@@ -137,8 +137,8 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	/** 
      * thread safely increase an integer
      * 
-     * @param t         the increasing integer
-     * @param n         the increasing step
+     * @param t
+     * @param n
      * @since           1.0
      */
 	public static void increase_ts(Integer t, int n) {
@@ -148,10 +148,8 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	}
 	
 	/** 
-     * thread safely decrease an integer
+     * constructor of NameNode class
      * 
-     * @param t         the decreasing integer
-     * @param n         the decreasing step
      * @since           1.0
      */
 	public static void decrease_ts(Integer t, int n) {
@@ -160,23 +158,10 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 		}
 	}
 	
-	/** 
-     * constructor of the TaskTracker
-     * 
-     * @since           1.0
-     */
 	protected TaskTracker() throws RemoteException {
 		super();
 	}
-    
-    /** 
-     * accept mapper task pushed from JobTracker 
-     * 
-     * @param jid       job id
-     * @param conf      configurations
-     * @param chunks    related file chunks and source
-     * @since           1.0
-     */
+
 	@SuppressWarnings("unused")
 	@Override
 	public void pushMapTask(int jid, JobConf conf, 
@@ -258,15 +243,7 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 		
 	}
 
-    /** 
-     * accept reducer task pushed from JobTracker 
-     * 
-     * @param jid           job id
-     * @param conf          configurations
-     * @param interNodes    intermediate nodes
-     * @param partition     partition number
-     * @since           1.0
-     */
+
 	@Override
 	public void pushReduceTask(int jid, JobConf conf, 
 			HashSet<String> interNodes, int partition) throws RemoteException {		
@@ -296,12 +273,7 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 		}
 	}
 	
-	/** 
-     * the main function of TaskTracker, read configuration files,
-     * register itself as service in local RMI registry
-     * 
-     * @since           1.0
-     */
+	
 	public static void main(String[] args) {
 		try
 	    {
@@ -340,26 +312,10 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 	    	System.out.println("Exception happend when running the TaskTracker!");
 	    }
 	}
-	
-	/** 
-     * respond possitively to heartbeat checks from JobTracker
-     * 
-     * @return          respond true
-     * @since           1.0
-     */
 	@Override
 	public boolean heartBeat() throws RemoteException {
 		return true;
 	}
-	
-	/** 
-     * get intermediate files from mappers and convert to a string
-     * 
-     * @param jobid     job id
-     * @param partition partition number
-     * @return          string of all intermediate files contents
-     * @since           1.0
-     */
 	@Override
 	public String getInterFiles(int jobid, int partition) throws RemoteException {
 		
@@ -387,15 +343,6 @@ public class TaskTracker extends UnicastRemoteObject implements TaskTrackerI{
 		
 	}
 	
-	/** 
-     * run the reducer task pushed from JobTracker
-     * 
-     * @param jid           job id
-     * @param conf          configurations
-     * @param partition     partition number
-     * @param interNodes    set of intermediate nodes
-     * @since               1.0
-     */
 	public void runReduceTask (int jid, JobConf conf, 
 			int partition, String classname, Set<String> interNodes){
 		
